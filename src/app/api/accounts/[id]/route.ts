@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const account = getAccountWithRelations(id);
+  const account = await getAccountWithRelations(id);
   if (!account) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
@@ -21,7 +21,7 @@ export async function PATCH(
   const { id } = await params;
   const body = await req.json();
   const stage = body.stage as Stage;
-  const account = updateAccountStage(id, stage);
+  const account = await updateAccountStage(id, stage);
   if (!account) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }

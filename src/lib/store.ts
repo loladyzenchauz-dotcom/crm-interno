@@ -1,98 +1,214 @@
-import { Account, Contact, Touchpoint, Task, Stage } from "./types";
+import { getPool } from "./db";
+import {
+  Account,
+  Contact,
+  Touchpoint,
+  Task,
+  Stage,
+  Channel,
+  AccountWithRelations,
+} from "./types";
 
-interface Store {
-  accounts: Account[];
-  contacts: Contact[];
-  touchpoints: Touchpoint[];
-  tasks: Task[];
+function toDateStr(d: unknown): string {
+  if (d instanceof Date) return d.toISOString().slice(0, 10);
+  return String(d);
 }
 
-function seed(): Store {
-  const accounts: Account[] = [
-    {
-      id: "acc-kellanova",
-      name: "Kellanova",
-      industry: "Consumo masivo",
-      stage: "working",
-      notes: "Prospección activa, contacto principal Cynthia.",
-      createdAt: "2026-08-01",
-    },
-    {
-      id: "acc-banregio",
-      name: "Banregio",
-      industry: "Banca",
-      stage: "meeting_scheduled",
-      notes: "Reunión agendada con AE, contacto Rosario (Rossy).",
-      createdAt: "2026-07-20",
-    },
-    {
-      id: "acc-sede-cafe",
-      name: "Sede Café",
-      industry: "Retail / cafeterías",
-      stage: "to_contact",
-      notes: "CHRO Javi identificado, pendiente primer contacto.",
-      createdAt: "2026-09-05",
-    },
-    {
-      id: "acc-grupo-costeno",
-      name: "Grupo Costeño",
-      industry: "Industrial",
-      stage: "working",
-      notes: "Multithreading con Julián Mora y Sofía Wohler.",
-      createdAt: "2026-08-15",
-    },
-  ];
-
-  const contacts: Contact[] = [
-    { id: "c-cynthia", accountId: "acc-kellanova", name: "Cynthia", role: "RRHH", isPrimary: true },
-    { id: "c-rosario", accountId: "acc-banregio", name: "Rosario (Rossy)", role: "RRHH", isPrimary: true },
-    { id: "c-javi", accountId: "acc-sede-cafe", name: "Javi", role: "CHRO", isPrimary: true },
-    { id: "c-julian", accountId: "acc-grupo-costeno", name: "Julián Mora", role: "Gerente Nacional de Reclutamiento", isPrimary: true },
-    { id: "c-sofia", accountId: "acc-grupo-costeno", name: "Sofía Wohler", role: "Directora de RH", isPrimary: false },
-  ];
-
-  const touchpoints: Touchpoint[] = [
-    { id: "tp-1", contactId: "c-cynthia", accountId: "acc-kellanova", channel: "email", date: "2026-09-01", outcome: "no_respondio" },
-    { id: "tp-2", contactId: "c-cynthia", accountId: "acc-kellanova", channel: "linkedin", date: "2026-09-03", outcome: "respondio" },
-    { id: "tp-3", contactId: "c-rosario", accountId: "acc-banregio", channel: "call", date: "2026-09-02", outcome: "respondio" },
-    { id: "tp-4", contactId: "c-julian", accountId: "acc-grupo-costeno", channel: "whatsapp", date: "2026-09-04", outcome: "respondio" },
-    { id: "tp-5", contactId: "c-sofia", accountId: "acc-grupo-costeno", channel: "email", date: "2026-09-08", outcome: "pendiente" },
-  ];
-
-  const tasks: Task[] = [
-    { id: "t-1", accountId: "acc-kellanova", contactId: "c-cynthia", channel: "email", scheduledDate: "2026-09-15", done: false },
-    { id: "t-2", accountId: "acc-sede-cafe", contactId: "c-javi", channel: "linkedin", scheduledDate: "2026-09-11", done: false },
-    { id: "t-3", accountId: "acc-grupo-costeno", contactId: "c-julian", channel: "call", scheduledDate: "2026-09-15", done: false },
-    { id: "t-4", accountId: "acc-grupo-costeno", contactId: "c-sofia", channel: "email", scheduledDate: "2026-09-17", done: false },
-  ];
-
-  return { accounts, contacts, touchpoints, tasks };
-}
-
-const globalForStore = globalThis as unknown as { __crmStore?: Store };
-
-export function getStore(): Store {
-  if (!globalForStore.__crmStore) {
-    globalForStore.__crmStore = seed();
-  }
-  return globalForStore.__crmStore;
-}
-
-export function updateAccountStage(accountId: string, stage: Stage) {
-  const store = getStore();
-  const account = store.accounts.find((a) => a.id === accountId);
-  if (account) account.stage = stage;
-  return account;
-}
-
-export function getAccountWithRelations(accountId: string) {
-  const store = getStore();
-  const account = store.accounts.find((a) => a.id === accountId);
-  if (!account) return null;
+function mapAccount(row: Record<string, unknown>): Account {
   return {
-    ...account,
-    contacts: store.contacts.filter((c) => c.accountId === accountId),
-    touchpoints: store.touchpoints.filter((t) => t.accountId === accountId),
-    tasks: store.tasks.filter((t) => t.accountId === accountId),
+    id: row.id as string,
+    name: row.name as string,
+    industry: (row.industry as string) ?? undefined,
+    stage: row.stage as Stage,
+    notes: (row.notes as string) ?? undefined,
+    createdAt: new Date(row.created_at as string).toISOString(),
   };
+}
+
+function mapContact(row: Record<string, unknown>): Contact {
+  return {
+    id: row.id as string,
+    accountId: row.account_id as string,
+    name: row.name as string,
+    role: (row.role as string) ?? undefined,
+    linkedin: (row.linkedin as string) ?? undefined,
+    email: (row.email as string) ?? undefined,
+    phone: (row.phone as string) ?? undefined,
+    isPrimary: Boolean(row.is_primary),
+  };
+}
+
+function mapTouchpoint(row: Record<string, unknown>): Touchpoint {
+  return {
+    id: row.id as string,
+    contactId: row.contact_id as string,
+    accountId: row.account_id as string,
+    channel: row.channel as Channel,
+    date: toDateStr(row.date),
+    notes: (row.notes as string) ?? undefined,
+    outcome: (row.outcome as Touchpoint["outcome"]) ?? undefined,
+  };
+}
+
+function mapTask(row: Record<string, unknown>): Task {
+  return {
+    id: row.id as string,
+    accountId: row.account_id as string,
+    contactId: row.contact_id as string,
+    channel: row.channel as Channel,
+    scheduledDate: toDateStr(row.scheduled_date),
+    done: Boolean(row.done),
+    notes: (row.notes as string) ?? undefined,
+  };
+}
+
+function newId(prefix: string): string {
+  return `${prefix}-${Date.now().toString(36)}-${Math.random()
+    .toString(36)
+    .slice(2, 8)}`;
+}
+
+export async function listAccounts(): Promise<Account[]> {
+  const pool = getPool();
+  const res = await pool.query(
+    "select * from accounts order by created_at desc"
+  );
+  return res.rows.map(mapAccount);
+}
+
+export async function updateAccountStage(
+  accountId: string,
+  stage: Stage
+): Promise<Account | null> {
+  const pool = getPool();
+  const res = await pool.query(
+    "update accounts set stage = $1 where id = $2 returning *",
+    [stage, accountId]
+  );
+  return res.rows[0] ? mapAccount(res.rows[0]) : null;
+}
+
+export async function getAccountWithRelations(
+  accountId: string
+): Promise<AccountWithRelations | null> {
+  const pool = getPool();
+  const accountRes = await pool.query("select * from accounts where id = $1", [
+    accountId,
+  ]);
+  if (!accountRes.rows[0]) return null;
+
+  const [contactsRes, touchpointsRes, tasksRes] = await Promise.all([
+    pool.query(
+      "select * from contacts where account_id = $1 order by is_primary desc, name asc",
+      [accountId]
+    ),
+    pool.query(
+      "select * from touchpoints where account_id = $1 order by date desc",
+      [accountId]
+    ),
+    pool.query(
+      "select * from tasks where account_id = $1 and done = false order by scheduled_date asc",
+      [accountId]
+    ),
+  ]);
+
+  return {
+    ...mapAccount(accountRes.rows[0]),
+    contacts: contactsRes.rows.map(mapContact),
+    touchpoints: touchpointsRes.rows.map(mapTouchpoint),
+    tasks: tasksRes.rows.map(mapTask),
+  };
+}
+
+export async function createAccount(input: {
+  name: string;
+  industry?: string;
+  notes?: string;
+}): Promise<Account> {
+  const pool = getPool();
+  const id = newId("acc");
+  const res = await pool.query(
+    `insert into accounts (id, name, industry, stage, notes)
+     values ($1, $2, $3, 'to_contact', $4) returning *`,
+    [id, input.name, input.industry || null, input.notes || null]
+  );
+  return mapAccount(res.rows[0]);
+}
+
+export async function createContact(input: {
+  accountId: string;
+  name: string;
+  role?: string;
+  linkedin?: string;
+  email?: string;
+  phone?: string;
+  isPrimary?: boolean;
+}): Promise<Contact> {
+  const pool = getPool();
+  const id = newId("c");
+  const res = await pool.query(
+    `insert into contacts (id, account_id, name, role, linkedin, email, phone, is_primary)
+     values ($1, $2, $3, $4, $5, $6, $7, $8) returning *`,
+    [
+      id,
+      input.accountId,
+      input.name,
+      input.role || null,
+      input.linkedin || null,
+      input.email || null,
+      input.phone || null,
+      Boolean(input.isPrimary),
+    ]
+  );
+  return mapContact(res.rows[0]);
+}
+
+export async function createTouchpoint(input: {
+  contactId: string;
+  accountId: string;
+  channel: Channel;
+  date: string;
+  notes?: string;
+  outcome?: Touchpoint["outcome"];
+}): Promise<Touchpoint> {
+  const pool = getPool();
+  const id = newId("tp");
+  const res = await pool.query(
+    `insert into touchpoints (id, contact_id, account_id, channel, date, notes, outcome)
+     values ($1, $2, $3, $4, $5, $6, $7) returning *`,
+    [
+      id,
+      input.contactId,
+      input.accountId,
+      input.channel,
+      input.date,
+      input.notes || null,
+      input.outcome || null,
+    ]
+  );
+  return mapTouchpoint(res.rows[0]);
+}
+
+export async function createTask(input: {
+  accountId: string;
+  contactId: string;
+  channel: Channel;
+  scheduledDate: string;
+  notes?: string;
+}): Promise<Task> {
+  const pool = getPool();
+  const id = newId("t");
+  const res = await pool.query(
+    `insert into tasks (id, account_id, contact_id, channel, scheduled_date, notes)
+     values ($1, $2, $3, $4, $5, $6) returning *`,
+    [
+      id,
+      input.accountId,
+      input.contactId,
+      input.channel,
+      input.scheduledDate,
+      input.notes || null,
+    ]
+  );
+  return mapTask(res.rows[0]);
 }

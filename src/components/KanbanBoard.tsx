@@ -15,6 +15,7 @@ import { useDroppable } from "@dnd-kit/core";
 import { useDraggable } from "@dnd-kit/core";
 import Link from "next/link";
 import { Account, STAGES, Stage } from "@/lib/types";
+import NewAccountForm from "./NewAccountForm";
 
 function AccountCard({ account }: { account: Account }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
@@ -87,13 +88,17 @@ export default function KanbanBoard() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  function reload() {
     fetch("/api/accounts")
       .then((r) => r.json())
       .then((data) => {
         setAccounts(data);
         setLoading(false);
       });
+  }
+
+  useEffect(() => {
+    reload();
   }, []);
 
   const sensors = useSensors(
@@ -139,6 +144,9 @@ export default function KanbanBoard() {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
+      <div className="flex items-center justify-end px-6 pt-4">
+        <NewAccountForm onCreated={reload} />
+      </div>
       <div className="flex gap-3 overflow-x-auto p-6">
         {STAGES.map((s) => (
           <Column

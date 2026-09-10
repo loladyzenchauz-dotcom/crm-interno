@@ -3,6 +3,11 @@ import { notFound } from "next/navigation";
 import { getAccountWithRelations } from "@/lib/store";
 import { CHANNELS, Channel } from "@/lib/types";
 import { format } from "date-fns";
+import {
+  NewContactForm,
+  NewTouchpointForm,
+  NewTaskForm,
+} from "@/components/AccountForms";
 
 export default async function AccountDetailPage({
   params,
@@ -10,7 +15,7 @@ export default async function AccountDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const account = getAccountWithRelations(id);
+  const account = await getAccountWithRelations(id);
   if (!account) notFound();
 
   const touchpointsByChannel: Record<Channel, number> = {
@@ -58,9 +63,18 @@ export default async function AccountDetailPage({
       </section>
 
       <section className="mt-8">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
-          Personas contactadas
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
+            Personas contactadas
+          </h2>
+          <div className="flex gap-3">
+            <NewContactForm accountId={account.id} />
+            <NewTouchpointForm
+              accountId={account.id}
+              contacts={account.contacts}
+            />
+          </div>
+        </div>
         <div className="mt-3 flex flex-col gap-4">
           {account.contacts.map((contact) => {
             const contactTouchpoints = account.touchpoints.filter(
@@ -121,34 +135,38 @@ export default async function AccountDetailPage({
         </div>
       </section>
 
-      {account.tasks.length > 0 && (
-        <section className="mt-8">
+      <section className="mt-8">
+        <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
             Próximos pendientes
           </h2>
-          <ul className="mt-3 flex flex-col gap-2">
-            {account.tasks.map((task) => {
-              const contact = account.contacts.find(
-                (c) => c.id === task.contactId
-              );
-              return (
-                <li
-                  key={task.id}
-                  className="flex items-center gap-2 rounded-lg border border-black/10 p-3 text-sm dark:border-white/10"
-                >
-                  <span className="w-24 shrink-0 text-xs text-neutral-500">
-                    {format(new Date(task.scheduledDate), "dd/MM/yyyy")}
-                  </span>
-                  <span>{contact?.name}</span>
-                  <span className="rounded bg-black/5 px-1.5 py-0.5 text-xs dark:bg-white/10">
-                    {CHANNELS.find((c) => c.id === task.channel)?.label}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      )}
+          <NewTaskForm accountId={account.id} contacts={account.contacts} />
+        </div>
+        <ul className="mt-3 flex flex-col gap-2">
+          {account.tasks.map((task) => {
+            const contact = account.contacts.find(
+              (c) => c.id === task.contactId
+            );
+            return (
+              <li
+                key={task.id}
+                className="flex items-center gap-2 rounded-lg border border-black/10 p-3 text-sm dark:border-white/10"
+              >
+                <span className="w-24 shrink-0 text-xs text-neutral-500">
+                  {format(new Date(task.scheduledDate), "dd/MM/yyyy")}
+                </span>
+                <span>{contact?.name}</span>
+                <span className="rounded bg-black/5 px-1.5 py-0.5 text-xs dark:bg-white/10">
+                  {CHANNELS.find((c) => c.id === task.channel)?.label}
+                </span>
+              </li>
+            );
+          })}
+          {account.tasks.length === 0 && (
+            <li className="text-sm text-neutral-400">Sin pendientes agendados</li>
+          )}
+        </ul>
+      </section>
     </div>
   );
 }
