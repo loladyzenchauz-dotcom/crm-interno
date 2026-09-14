@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CHANNELS, Contact } from "@/lib/types";
 
 export function NewContactForm({ accountId }: { accountId: string }) {
@@ -87,6 +87,12 @@ export function NewTouchpointForm({
   const [channel, setChannel] = useState(CHANNELS[0].id);
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!contacts.some((c) => c.id === contactId)) {
+      setContactId(contacts[0]?.id ?? "");
+    }
+  }, [contacts, contactId]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -179,6 +185,12 @@ export function NewTaskForm({
   const [channel, setChannel] = useState(CHANNELS[0].id);
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!contacts.some((c) => c.id === contactId)) {
+      setContactId(contacts[0]?.id ?? "");
+    }
+  }, [contacts, contactId]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

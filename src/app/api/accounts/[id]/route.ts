@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAccountWithRelations, updateAccountStage } from "@/lib/store";
+import { getPool } from "@/lib/db";
 import { Stage } from "@/lib/types";
 
 export async function GET(
@@ -26,4 +27,14 @@ export async function PATCH(
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
   return NextResponse.json(account);
+}
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const pool = getPool();
+  await pool.query("delete from accounts where id = $1", [id]);
+  return NextResponse.json({ ok: true });
 }

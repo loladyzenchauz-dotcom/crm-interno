@@ -8,6 +8,7 @@ import {
   NewTouchpointForm,
   NewTaskForm,
 } from "@/components/AccountForms";
+import DeleteAccountButton from "@/components/DeleteAccountButton";
 
 export default async function AccountDetailPage({
   params,
@@ -30,9 +31,12 @@ export default async function AccountDetailPage({
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-8">
-      <Link href="/" className="text-sm text-neutral-500 hover:underline">
-        ← Volver al tablero
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link href="/" className="text-sm text-neutral-500 hover:underline">
+          ← Volver al tablero
+        </Link>
+        <DeleteAccountButton accountId={account.id} accountName={account.name} />
+      </div>
       <h1 className="mt-2 text-2xl font-semibold">{account.name}</h1>
       {account.industry && (
         <p className="text-sm text-neutral-500">{account.industry}</p>
