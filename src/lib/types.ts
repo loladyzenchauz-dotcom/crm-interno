@@ -4,7 +4,8 @@ export type Stage =
   | "meeting_scheduled"
   | "ae_sales_process"
   | "bad_fit"
-  | "paused";
+  | "paused"
+  | "disqualified";
 
 export const STAGES: { id: Stage; label: string }[] = [
   { id: "to_contact", label: "To contact" },
@@ -13,6 +14,7 @@ export const STAGES: { id: Stage; label: string }[] = [
   { id: "ae_sales_process", label: "AE sales process" },
   { id: "bad_fit", label: "Bad fit" },
   { id: "paused", label: "Pausa" },
+  { id: "disqualified", label: "Disqualified" },
 ];
 
 export type Channel = "whatsapp" | "linkedin" | "email" | "call";
