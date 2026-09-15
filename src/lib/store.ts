@@ -288,6 +288,14 @@ export async function createTouchpoint(input: {
   return mapTouchpoint(res.rows[0]);
 }
 
+// Todos los touchpoints, para el tracker de outreach semanal (calcula
+// métricas en vivo a partir de esto, no de una importación histórica del Excel).
+export async function listAllTouchpoints(): Promise<Touchpoint[]> {
+  const pool = getPool();
+  const res = await pool.query(`select * from touchpoints order by date asc`);
+  return res.rows.map(mapTouchpoint);
+}
+
 export async function getSummary(): Promise<Summary> {
   const pool = getPool();
 

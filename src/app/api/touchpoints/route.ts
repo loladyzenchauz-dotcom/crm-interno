@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createTouchpoint } from "@/lib/store";
+import { createTouchpoint, listAllTouchpoints } from "@/lib/store";
+
+export async function GET() {
+  const touchpoints = await listAllTouchpoints();
+  return NextResponse.json(touchpoints);
+}
 
 export async function POST(req: NextRequest) {
   const body = await req.json();

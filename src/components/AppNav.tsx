@@ -4,6 +4,7 @@ const TABS = [
   { href: "/", label: "Panel de control" },
   { href: "/crm", label: "CRM Interno" },
   { href: "/reuniones", label: "Reuniones" },
+  { href: "/tracker-outreach", label: "Tracker Outreach" },
 ] as const;
 
 export default function AppNav({ current }: { current: string }) {
