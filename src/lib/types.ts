@@ -17,10 +17,9 @@ export const STAGES: { id: Stage; label: string }[] = [
   { id: "disqualified", label: "Disqualified" },
 ];
 
-// Stages that count as "en prospección activa" para el resumen del tablero.
-// Quedan afuera bad_fit, paused y disqualified porque ya no se está trabajando esa cuenta.
+// Stages that count as "en prospección activa" para el resumen del tablero:
+// solo cuentas donde ya hay trabajo en curso (working, reunión agendada, AE sales process).
 export const ACTIVE_PROSPECTING_STAGES: Stage[] = [
-  "to_contact",
   "working",
   "meeting_scheduled",
   "ae_sales_process",
