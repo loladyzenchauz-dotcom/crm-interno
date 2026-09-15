@@ -8,6 +8,7 @@ import {
   NewTouchpointForm,
   NewTaskForm,
   BriefEditor,
+  SalesNavigatorEditor,
 } from "@/components/AccountForms";
 import DeleteAccountButton from "@/components/DeleteAccountButton";
 
@@ -42,16 +43,10 @@ export default async function AccountDetailPage({
       {account.industry && (
         <p className="text-sm text-neutral-500">{account.industry}</p>
       )}
-      {account.salesNavigatorUrl && (
-        <a
-          href={account.salesNavigatorUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-1 inline-block text-sm text-blue-600 hover:underline dark:text-blue-400"
-        >
-          🔗 Stakeholder map (Sales Navigator)
-        </a>
-      )}
+      <SalesNavigatorEditor
+        accountId={account.id}
+        initialUrl={account.salesNavigatorUrl}
+      />
       {account.notes && <p className="mt-2 text-sm">{account.notes}</p>}
 
       {(account.stage === "meeting_scheduled" ||

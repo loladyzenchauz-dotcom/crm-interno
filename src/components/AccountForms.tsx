@@ -79,6 +79,83 @@ export function BriefEditor({
   );
 }
 
+export function SalesNavigatorEditor({
+  accountId,
+  initialUrl,
+}: {
+  accountId: string;
+  initialUrl?: string;
+}) {
+  const router = useRouter();
+  const [editing, setEditing] = useState(false);
+  const [url, setUrl] = useState(initialUrl ?? "");
+  const [saving, setSaving] = useState(false);
+
+  async function handleSave() {
+    setSaving(true);
+    await fetch(`/api/accounts/${accountId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ salesNavigatorUrl: url }),
+    });
+    setSaving(false);
+    setEditing(false);
+    router.refresh();
+  }
+
+  if (!editing) {
+    return (
+      <div className="mt-1 flex items-center gap-2">
+        {initialUrl && (
+          <a
+            href={initialUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-block text-sm text-blue-600 hover:underline dark:text-blue-400"
+          >
+            🔗 Stakeholder map (Sales Navigator)
+          </a>
+        )}
+        <button
+          onClick={() => setEditing(true)}
+          className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+        >
+          {initialUrl ? "Editar link" : "+ Agregar link de Sales Navigator"}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-2">
+      <input
+        autoFocus
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+        placeholder="Link del stakeholder map de Sales Navigator"
+        className="w-72 rounded border border-black/10 bg-transparent px-2 py-1 text-sm dark:border-white/10"
+      />
+      <button
+        onClick={handleSave}
+        disabled={saving}
+        className="rounded bg-black px-2 py-1 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-black"
+      >
+        {saving ? "Guardando..." : "Guardar"}
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          setUrl(initialUrl ?? "");
+          setEditing(false);
+        }}
+        className="text-sm text-neutral-500"
+      >
+        Cancelar
+      </button>
+    </div>
+  );
+}
+
 export function NewContactForm({ accountId }: { accountId: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
