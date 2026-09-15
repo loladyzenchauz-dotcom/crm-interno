@@ -158,6 +158,18 @@ export const MEETING_STATUS_COLORS: Record<MeetingStatus, string> = {
   Cancelled: "#e11d48",
 };
 
+// "Calificada" es un seguimiento que cambia con el tiempo (arranca en blanco,
+// se va definiendo), por eso también es editable como dropdown.
+export type QualifiedStatus = "Si" | "No" | "En proceso";
+
+export const QUALIFIED_OPTIONS: QualifiedStatus[] = ["Si", "No", "En proceso"];
+
+export const QUALIFIED_COLORS: Record<QualifiedStatus, string> = {
+  Si: "#10b981",
+  No: "#e11d48",
+  "En proceso": "#3366ff",
+};
+
 export interface Meeting {
   id: string;
   forMonth?: string; // "Para que mes va el SQC"

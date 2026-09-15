@@ -7,27 +7,45 @@ import {
   MEETING_STATUS_COLORS,
   MEETING_TYPES,
   MeetingStatus,
+  QUALIFIED_OPTIONS,
+  QUALIFIED_COLORS,
+  QualifiedStatus,
 } from "@/lib/types";
 import { format } from "date-fns";
 
-function StatusBadgeSelect({
-  meeting,
+// Dropdown coloreado genérico, para cualquier campo de seguimiento que
+// cambia con el tiempo (estado de la reunión, calificación...).
+function ColoredSelect<T extends string>({
+  value,
+  options,
+  colors,
+  fallbackColor = "#71717a",
+  emptyLabel,
   onChange,
 }: {
-  meeting: Meeting;
-  onChange: (status: MeetingStatus) => void;
+  value: T | undefined;
+  options: T[];
+  colors: Record<T, string>;
+  fallbackColor?: string;
+  emptyLabel?: string;
+  onChange: (value: T) => void;
 }) {
-  const color = meeting.status ? MEETING_STATUS_COLORS[meeting.status] : "#71717a";
+  const color = value ? colors[value] : fallbackColor;
   return (
     <select
-      value={meeting.status ?? ""}
-      onChange={(e) => onChange(e.target.value as MeetingStatus)}
+      value={value ?? ""}
+      onChange={(e) => onChange(e.target.value as T)}
       style={{ color, borderColor: color }}
       className="rounded-full border bg-transparent px-2 py-0.5 text-xs font-medium"
     >
-      {MEETING_STATUSES.map((s) => (
-        <option key={s} value={s} className="text-black">
-          {s}
+      {!value && emptyLabel && (
+        <option value="" className="text-black">
+          {emptyLabel}
+        </option>
+      )}
+      {options.map((o) => (
+        <option key={o} value={o} className="text-black">
+          {o}
         </option>
       ))}
     </select>
@@ -225,6 +243,17 @@ export default function MeetingsTable({ initial }: { initial: Meeting[] }) {
     });
   }
 
+  async function handleQualifiedChange(id: string, qualified: QualifiedStatus) {
+    setMeetings((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, qualified } : m))
+    );
+    await fetch(`/api/meetings/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ qualified }),
+    });
+  }
+
   const counts = useMemo(() => {
     const byStatus: Record<string, number> = {};
     for (const m of meetings) {
@@ -328,9 +357,10 @@ export default function MeetingsTable({ initial }: { initial: Meeting[] }) {
                           href={m.linkedinUrl}
                           target="_blank"
                           rel="noreferrer"
+                          title="Ver perfil de LinkedIn"
                           className="text-[var(--emi-blue)] hover:underline"
                         >
-                          {m.contactName}
+                          {m.contactName} 🔗
                         </a>
                       ) : (
                         m.contactName
@@ -348,14 +378,24 @@ export default function MeetingsTable({ initial }: { initial: Meeting[] }) {
                 <td className="px-3 py-2 text-xs">{m.type ?? "—"}</td>
                 <td className="px-3 py-2 text-xs">{m.channel ?? "—"}</td>
                 <td className="px-3 py-2">
-                  <StatusBadgeSelect
-                    meeting={m}
+                  <ColoredSelect<MeetingStatus>
+                    value={m.status}
+                    options={MEETING_STATUSES}
+                    colors={MEETING_STATUS_COLORS}
                     onChange={(status) => handleStatusChange(m.id, status)}
                   />
                 </td>
                 <td className="px-3 py-2 text-xs">{m.ae ?? "—"}</td>
                 <td className="px-3 py-2 text-xs">{m.sqcValue ?? "—"}</td>
-                <td className="px-3 py-2 text-xs">{m.qualified ?? "—"}</td>
+                <td className="px-3 py-2">
+                  <ColoredSelect<QualifiedStatus>
+                    value={m.qualified as QualifiedStatus | undefined}
+                    options={QUALIFIED_OPTIONS}
+                    colors={QUALIFIED_COLORS}
+                    emptyLabel="Sin definir"
+                    onChange={(qualified) => handleQualifiedChange(m.id, qualified)}
+                  />
+                </td>
                 <td className="max-w-[220px] truncate px-3 py-2 text-xs text-neutral-500">
                   {m.note ?? ""}
                 </td>
