@@ -6,6 +6,8 @@ create table if not exists accounts (
   industry text,
   stage text not null default 'to_contact',
   notes text,
+  sales_navigator_url text,
+  ae_brief text,
   created_at timestamptz not null default now()
 );
 
@@ -33,8 +35,11 @@ create table if not exists touchpoints (
 create table if not exists tasks (
   id text primary key,
   account_id text not null references accounts(id) on delete cascade,
-  contact_id text not null references contacts(id) on delete cascade,
-  channel text not null,
+  -- 'outreach' = contactar a alguien; 'ae_brief' = preparar/enviar el brief al AE.
+  type text not null default 'outreach',
+  -- contact_id y channel son nulos en tasks de tipo 'ae_brief'.
+  contact_id text references contacts(id) on delete cascade,
+  channel text,
   scheduled_date date not null,
   done boolean not null default false,
   notes text

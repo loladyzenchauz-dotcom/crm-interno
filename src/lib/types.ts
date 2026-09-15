@@ -66,11 +66,16 @@ export interface Contact {
   isPrimary?: boolean;
 }
 
+export type TaskType = "outreach" | "ae_brief";
+
 export interface Task {
   id: string;
   accountId: string;
-  contactId: string;
-  channel: Channel;
+  // Los pendientes de "outreach" (contactar a alguien) tienen contacto y canal;
+  // los de "ae_brief" (preparar el brief para el AE antes de la reunión) no.
+  type: TaskType;
+  contactId?: string;
+  channel?: Channel;
   scheduledDate: string; // ISO date
   done: boolean;
   notes?: string;
@@ -82,6 +87,10 @@ export interface Account {
   industry?: string;
   stage: Stage;
   notes?: string;
+  // Link al stakeholder map de Sales Navigator para esta cuenta.
+  salesNavigatorUrl?: string;
+  // Brief para el AE con contexto previo a la reunión agendada.
+  aeBrief?: string;
   createdAt: string;
 }
 

@@ -7,6 +7,7 @@ import {
   NewContactForm,
   NewTouchpointForm,
   NewTaskForm,
+  BriefEditor,
 } from "@/components/AccountForms";
 import DeleteAccountButton from "@/components/DeleteAccountButton";
 
@@ -41,7 +42,30 @@ export default async function AccountDetailPage({
       {account.industry && (
         <p className="text-sm text-neutral-500">{account.industry}</p>
       )}
+      {account.salesNavigatorUrl && (
+        <a
+          href={account.salesNavigatorUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-1 inline-block text-sm text-blue-600 hover:underline dark:text-blue-400"
+        >
+          🔗 Stakeholder map (Sales Navigator)
+        </a>
+      )}
       {account.notes && <p className="mt-2 text-sm">{account.notes}</p>}
+
+      {(account.stage === "meeting_scheduled" ||
+        account.stage === "ae_sales_process" ||
+        account.aeBrief) && (
+        <section className="mt-8">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
+            Brief para el AE
+          </h2>
+          <div className="mt-3">
+            <BriefEditor accountId={account.id} initialBrief={account.aeBrief} />
+          </div>
+        </section>
+      )}
 
       <section className="mt-8">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
@@ -181,6 +205,22 @@ export default async function AccountDetailPage({
         </div>
         <ul className="mt-3 flex flex-col gap-2">
           {account.tasks.map((task) => {
+            if (task.type === "ae_brief") {
+              return (
+                <li
+                  key={task.id}
+                  className="flex items-center gap-2 rounded-lg border border-black/10 p-3 text-sm dark:border-white/10"
+                >
+                  <span className="w-24 shrink-0 text-xs text-neutral-500">
+                    {format(new Date(task.scheduledDate), "dd/MM/yyyy")}
+                  </span>
+                  <span className="rounded bg-black/5 px-1.5 py-0.5 text-xs dark:bg-white/10">
+                    📋 Brief AE
+                  </span>
+                  <span>{task.notes}</span>
+                </li>
+              );
+            }
             const contact = account.contacts.find(
               (c) => c.id === task.contactId
             );
@@ -194,7 +234,9 @@ export default async function AccountDetailPage({
                 </span>
                 <span>{contact?.name}</span>
                 <span className="rounded bg-black/5 px-1.5 py-0.5 text-xs dark:bg-white/10">
-                  {CHANNELS.find((c) => c.id === task.channel)?.label}
+                  {task.channel
+                    ? CHANNELS.find((c) => c.id === task.channel)?.label
+                    : null}
                 </span>
               </li>
             );

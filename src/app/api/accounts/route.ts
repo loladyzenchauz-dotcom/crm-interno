@@ -15,6 +15,7 @@ export async function POST(req: NextRequest) {
     name: body.name,
     industry: body.industry,
     notes: body.notes,
+    salesNavigatorUrl: body.salesNavigatorUrl,
   });
   return NextResponse.json(account, { status: 201 });
 }

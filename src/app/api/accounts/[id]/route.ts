@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAccountWithRelations, updateAccountStage } from "@/lib/store";
+import {
+  getAccountWithRelations,
+  updateAccountStage,
+  updateAccountFields,
+} from "@/lib/store";
 import { getPool } from "@/lib/db";
 import { Stage } from "@/lib/types";
 
@@ -21,8 +25,18 @@ export async function PATCH(
 ) {
   const { id } = await params;
   const body = await req.json();
-  const stage = body.stage as Stage;
-  const account = await updateAccountStage(id, stage);
+
+  let account = null;
+  if (body.stage !== undefined) {
+    account = await updateAccountStage(id, body.stage as Stage);
+  }
+  if (body.salesNavigatorUrl !== undefined || body.aeBrief !== undefined) {
+    account = await updateAccountFields(id, {
+      salesNavigatorUrl: body.salesNavigatorUrl,
+      aeBrief: body.aeBrief,
+    });
+  }
+
   if (!account) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }

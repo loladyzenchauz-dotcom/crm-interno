@@ -10,6 +10,7 @@ export default function NewAccountForm({
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [industry, setIndustry] = useState("");
+  const [salesNavigatorUrl, setSalesNavigatorUrl] = useState("");
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -19,11 +20,16 @@ export default function NewAccountForm({
     await fetch("/api/accounts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, industry: industry || undefined }),
+      body: JSON.stringify({
+        name,
+        industry: industry || undefined,
+        salesNavigatorUrl: salesNavigatorUrl || undefined,
+      }),
     });
     setSaving(false);
     setName("");
     setIndustry("");
+    setSalesNavigatorUrl("");
     setOpen(false);
     onCreated();
   }
@@ -56,6 +62,12 @@ export default function NewAccountForm({
         onChange={(e) => setIndustry(e.target.value)}
         placeholder="Industria (opcional)"
         className="rounded border border-black/10 bg-transparent px-2 py-1 text-sm dark:border-white/10"
+      />
+      <input
+        value={salesNavigatorUrl}
+        onChange={(e) => setSalesNavigatorUrl(e.target.value)}
+        placeholder="Link Sales Navigator (opcional)"
+        className="w-56 rounded border border-black/10 bg-transparent px-2 py-1 text-sm dark:border-white/10"
       />
       <button
         type="submit"

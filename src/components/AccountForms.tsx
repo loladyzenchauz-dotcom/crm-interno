@@ -4,6 +4,81 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CHANNELS, Contact, OUTCOMES } from "@/lib/types";
 
+export function BriefEditor({
+  accountId,
+  initialBrief,
+}: {
+  accountId: string;
+  initialBrief?: string;
+}) {
+  const router = useRouter();
+  const [editing, setEditing] = useState(false);
+  const [brief, setBrief] = useState(initialBrief ?? "");
+  const [saving, setSaving] = useState(false);
+
+  async function handleSave() {
+    setSaving(true);
+    await fetch(`/api/accounts/${accountId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ aeBrief: brief }),
+    });
+    setSaving(false);
+    setEditing(false);
+    router.refresh();
+  }
+
+  if (!editing) {
+    return (
+      <div>
+        {initialBrief ? (
+          <p className="whitespace-pre-wrap text-sm">{initialBrief}</p>
+        ) : (
+          <p className="text-sm text-neutral-400">Todavía no cargaste el brief.</p>
+        )}
+        <button
+          onClick={() => setEditing(true)}
+          className="mt-2 text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+        >
+          {initialBrief ? "Editar brief" : "+ Agregar brief"}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <textarea
+        autoFocus
+        value={brief}
+        onChange={(e) => setBrief(e.target.value)}
+        placeholder="Contexto para el AE: qué se habló, quién asiste, dolores detectados, próximos pasos sugeridos..."
+        rows={5}
+        className="w-full rounded border border-black/10 bg-transparent p-2 text-sm dark:border-white/10"
+      />
+      <div className="flex gap-2">
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="rounded bg-black px-2 py-1 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-black"
+        >
+          {saving ? "Guardando..." : "Guardar"}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setBrief(initialBrief ?? "");
+            setEditing(false);
+          }}
+          className="text-sm text-neutral-500"
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function NewContactForm({ accountId }: { accountId: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);

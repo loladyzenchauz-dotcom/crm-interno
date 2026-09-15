@@ -111,13 +111,27 @@ function AccountCard({ account }: { account: Account }) {
         isDragging ? "opacity-50" : ""
       }`}
     >
-      <Link
-        href={`/accounts/${account.id}`}
-        onClick={(e) => isDragging && e.preventDefault()}
-        className="font-medium hover:underline"
-      >
-        {account.name}
-      </Link>
+      <div className="flex items-center justify-between gap-2">
+        <Link
+          href={`/accounts/${account.id}`}
+          onClick={(e) => isDragging && e.preventDefault()}
+          className="font-medium hover:underline"
+        >
+          {account.name}
+        </Link>
+        {account.salesNavigatorUrl && (
+          <a
+            href={account.salesNavigatorUrl}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            title="Stakeholder map (Sales Navigator)"
+            className="shrink-0 text-xs text-neutral-500 hover:text-blue-600 dark:hover:text-blue-400"
+          >
+            🔗
+          </a>
+        )}
+      </div>
       {account.industry && (
         <p className="mt-1 text-xs text-neutral-500">{account.industry}</p>
       )}

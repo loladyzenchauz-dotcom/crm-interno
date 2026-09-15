@@ -3,17 +3,22 @@ import { createTask } from "@/lib/store";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  if (!body.accountId || !body.contactId || !body.channel || !body.scheduledDate) {
+  const type = body.type || "outreach";
+  if (!body.accountId || !body.scheduledDate) {
     return NextResponse.json(
-      {
-        error:
-          "accountId, contactId, channel and scheduledDate are required",
-      },
+      { error: "accountId and scheduledDate are required" },
+      { status: 400 }
+    );
+  }
+  if (type === "outreach" && (!body.contactId || !body.channel)) {
+    return NextResponse.json(
+      { error: "contactId and channel are required for outreach tasks" },
       { status: 400 }
     );
   }
   const task = await createTask({
     accountId: body.accountId,
+    type,
     contactId: body.contactId,
     channel: body.channel,
     scheduledDate: body.scheduledDate,

@@ -24,6 +24,8 @@ function mapAccount(row: Record<string, unknown>): Account {
     industry: (row.industry as string) ?? undefined,
     stage: row.stage as Stage,
     notes: (row.notes as string) ?? undefined,
+    salesNavigatorUrl: (row.sales_navigator_url as string) ?? undefined,
+    aeBrief: (row.ae_brief as string) ?? undefined,
     createdAt: new Date(row.created_at as string).toISOString(),
   };
 }
@@ -57,8 +59,9 @@ function mapTask(row: Record<string, unknown>): Task {
   return {
     id: row.id as string,
     accountId: row.account_id as string,
-    contactId: row.contact_id as string,
-    channel: row.channel as Channel,
+    type: (row.type as Task["type"]) ?? "outreach",
+    contactId: (row.contact_id as string) ?? undefined,
+    channel: (row.channel as Channel) ?? undefined,
     scheduledDate: toDateStr(row.scheduled_date),
     done: Boolean(row.done),
     notes: (row.notes as string) ?? undefined,
@@ -84,9 +87,68 @@ export async function updateAccountStage(
   stage: Stage
 ): Promise<Account | null> {
   const pool = getPool();
+
+  const prevRes = await pool.query(
+    "select stage from accounts where id = $1",
+    [accountId]
+  );
+  const previousStage = prevRes.rows[0]?.stage as Stage | undefined;
+
   const res = await pool.query(
     "update accounts set stage = $1 where id = $2 returning *",
     [stage, accountId]
+  );
+  if (!res.rows[0]) return null;
+
+  // Al entrar a "Reunión agendada" (desde cualquier otra etapa), crear
+  // automáticamente el pendiente de preparar el brief para el AE, si todavía
+  // no existe uno sin completar para esta cuenta.
+  if (stage === "meeting_scheduled" && previousStage !== "meeting_scheduled") {
+    const existing = await pool.query(
+      `select id from tasks where account_id = $1 and type = 'ae_brief' and done = false limit 1`,
+      [accountId]
+    );
+    if (existing.rows.length === 0) {
+      await createTask({
+        accountId,
+        type: "ae_brief",
+        scheduledDate: new Date().toISOString().slice(0, 10),
+        notes: "Preparar y enviar el brief al AE con contexto previo a la reunión",
+      });
+    }
+  }
+
+  return mapAccount(res.rows[0]);
+}
+
+export async function updateAccountFields(
+  accountId: string,
+  fields: { salesNavigatorUrl?: string; aeBrief?: string }
+): Promise<Account | null> {
+  const pool = getPool();
+  const sets: string[] = [];
+  const values: unknown[] = [];
+  let i = 1;
+
+  if (fields.salesNavigatorUrl !== undefined) {
+    sets.push(`sales_navigator_url = $${i++}`);
+    values.push(fields.salesNavigatorUrl || null);
+  }
+  if (fields.aeBrief !== undefined) {
+    sets.push(`ae_brief = $${i++}`);
+    values.push(fields.aeBrief || null);
+  }
+  if (sets.length === 0) {
+    const res = await pool.query("select * from accounts where id = $1", [
+      accountId,
+    ]);
+    return res.rows[0] ? mapAccount(res.rows[0]) : null;
+  }
+
+  values.push(accountId);
+  const res = await pool.query(
+    `update accounts set ${sets.join(", ")} where id = $${i} returning *`,
+    values
   );
   return res.rows[0] ? mapAccount(res.rows[0]) : null;
 }
@@ -127,13 +189,20 @@ export async function createAccount(input: {
   name: string;
   industry?: string;
   notes?: string;
+  salesNavigatorUrl?: string;
 }): Promise<Account> {
   const pool = getPool();
   const id = newId("acc");
   const res = await pool.query(
-    `insert into accounts (id, name, industry, stage, notes)
-     values ($1, $2, $3, 'to_contact', $4) returning *`,
-    [id, input.name, input.industry || null, input.notes || null]
+    `insert into accounts (id, name, industry, stage, notes, sales_navigator_url)
+     values ($1, $2, $3, 'to_contact', $4, $5) returning *`,
+    [
+      id,
+      input.name,
+      input.industry || null,
+      input.notes || null,
+      input.salesNavigatorUrl || null,
+    ]
   );
   return mapAccount(res.rows[0]);
 }
@@ -230,21 +299,23 @@ export async function getSummary(): Promise<Summary> {
 
 export async function createTask(input: {
   accountId: string;
-  contactId: string;
-  channel: Channel;
+  type?: Task["type"];
+  contactId?: string;
+  channel?: Channel;
   scheduledDate: string;
   notes?: string;
 }): Promise<Task> {
   const pool = getPool();
   const id = newId("t");
   const res = await pool.query(
-    `insert into tasks (id, account_id, contact_id, channel, scheduled_date, notes)
-     values ($1, $2, $3, $4, $5, $6) returning *`,
+    `insert into tasks (id, account_id, type, contact_id, channel, scheduled_date, notes)
+     values ($1, $2, $3, $4, $5, $6, $7) returning *`,
     [
       id,
       input.accountId,
-      input.contactId,
-      input.channel,
+      input.type || "outreach",
+      input.contactId || null,
+      input.channel || null,
       input.scheduledDate,
       input.notes || null,
     ]
