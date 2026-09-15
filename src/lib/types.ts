@@ -37,11 +37,13 @@ export const CHANNELS: { id: Channel; label: string }[] = [
 
 export type Outcome = "respondio" | "no_respondio" | "pendiente" | "reunion_agendada";
 
+// "no_respondio" primero: es el resultado por default al registrar un touchpoint
+// (si no hay respuesta todavía no hace falta tocar nada); se cambia a mano si respondió.
 export const OUTCOMES: { id: Outcome; label: string }[] = [
-  { id: "pendiente", label: "Pendiente" },
-  { id: "respondio", label: "Respondió" },
   { id: "no_respondio", label: "Sin respuesta" },
+  { id: "respondio", label: "Respondió" },
   { id: "reunion_agendada", label: "Reunión agendada" },
+  { id: "pendiente", label: "Pendiente" },
 ];
 
 export interface Touchpoint {
