@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAccountWithRelations } from "@/lib/store";
-import { CHANNELS, Channel } from "@/lib/types";
+import { CHANNELS, Channel, STAGES, STAGE_COLORS } from "@/lib/types";
 import { format } from "date-fns";
 import {
   NewContactForm,
@@ -34,12 +34,23 @@ export default async function AccountDetailPage({
   return (
     <div className="mx-auto max-w-3xl px-6 py-8">
       <div className="flex items-center justify-between">
-        <Link href="/" className="text-sm text-neutral-500 hover:underline">
+        <Link
+          href="/"
+          className="text-sm text-neutral-500 hover:text-[var(--emi-blue)] hover:underline"
+        >
           ← Volver al tablero
         </Link>
         <DeleteAccountButton accountId={account.id} accountName={account.name} />
       </div>
-      <h1 className="mt-2 text-2xl font-semibold">{account.name}</h1>
+      <div className="mt-2 flex items-center gap-3">
+        <h1 className="text-2xl font-semibold">{account.name}</h1>
+        <span
+          className="rounded-full px-2 py-0.5 text-xs font-medium text-white"
+          style={{ backgroundColor: STAGE_COLORS[account.stage] }}
+        >
+          {STAGES.find((s) => s.id === account.stage)?.label}
+        </span>
+      </div>
       {account.industry && (
         <p className="text-sm text-neutral-500">{account.industry}</p>
       )}

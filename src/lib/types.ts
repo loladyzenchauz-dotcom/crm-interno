@@ -25,6 +25,19 @@ export const ACTIVE_PROSPECTING_STAGES: Stage[] = [
   "ae_sales_process",
 ];
 
+// Color de acento por etapa, usado en columnas y tarjetas del tablero.
+// Combina la marca Emi (azul, violeta) con semáforo estándar para los
+// estados de salida (verde = avance, rojo = perdido, ámbar = pausado, gris = neutro).
+export const STAGE_COLORS: Record<Stage, string> = {
+  to_contact: "#71717a",
+  working: "#3366ff",
+  meeting_scheduled: "#10b981",
+  ae_sales_process: "#6549f5",
+  bad_fit: "#e11d48",
+  paused: "#ff7a45",
+  disqualified: "#3f3f46",
+};
+
 export type Channel = "whatsapp" | "linkedin" | "email" | "call";
 
 export const CHANNELS: { id: Channel; label: string }[] = [

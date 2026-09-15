@@ -38,7 +38,7 @@ export function BriefEditor({
         )}
         <button
           onClick={() => setEditing(true)}
-          className="mt-2 text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+          className="mt-2 text-sm font-medium text-[var(--emi-blue)] hover:underline dark:brightness-125"
         >
           {initialBrief ? "Editar brief" : "+ Agregar brief"}
         </button>
@@ -60,7 +60,7 @@ export function BriefEditor({
         <button
           onClick={handleSave}
           disabled={saving}
-          className="rounded bg-black px-2 py-1 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-black"
+          className="rounded bg-[var(--emi-blue)] px-2 py-1 text-sm font-medium text-white transition-colors hover:bg-[var(--emi-blue-hover)] disabled:opacity-50"
         >
           {saving ? "Guardando..." : "Guardar"}
         </button>
@@ -111,14 +111,14 @@ export function SalesNavigatorEditor({
             href={initialUrl}
             target="_blank"
             rel="noreferrer"
-            className="inline-block text-sm text-blue-600 hover:underline dark:text-blue-400"
+            className="inline-block text-sm text-[var(--emi-blue)] hover:underline dark:brightness-125"
           >
             🔗 Stakeholder map (Sales Navigator)
           </a>
         )}
         <button
           onClick={() => setEditing(true)}
-          className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+          className="text-sm font-medium text-[var(--emi-blue)] hover:underline dark:brightness-125"
         >
           {initialUrl ? "Editar link" : "+ Agregar link de Sales Navigator"}
         </button>
@@ -138,7 +138,7 @@ export function SalesNavigatorEditor({
       <button
         onClick={handleSave}
         disabled={saving}
-        className="rounded bg-black px-2 py-1 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-black"
+        className="rounded bg-[var(--emi-blue)] px-2 py-1 text-sm font-medium text-white transition-colors hover:bg-[var(--emi-blue-hover)] disabled:opacity-50"
       >
         {saving ? "Guardando..." : "Guardar"}
       </button>
@@ -183,7 +183,7 @@ export function NewContactForm({ accountId }: { accountId: string }) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+        className="text-sm font-medium text-[var(--emi-blue)] hover:underline dark:brightness-125"
       >
         + Agregar contacto
       </button>
@@ -211,7 +211,7 @@ export function NewContactForm({ accountId }: { accountId: string }) {
       <button
         type="submit"
         disabled={saving}
-        className="rounded bg-black px-2 py-1 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-black"
+        className="rounded bg-[var(--emi-blue)] px-2 py-1 text-sm font-medium text-white transition-colors hover:bg-[var(--emi-blue-hover)] disabled:opacity-50"
       >
         {saving ? "Guardando..." : "Agregar"}
       </button>
@@ -267,7 +267,7 @@ export function NewTouchpointForm({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+        className="text-sm font-medium text-[var(--emi-blue)] hover:underline dark:brightness-125"
       >
         + Registrar touchpoint
       </button>
@@ -321,7 +321,7 @@ export function NewTouchpointForm({
       <button
         type="submit"
         disabled={saving}
-        className="rounded bg-black px-2 py-1 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-black"
+        className="rounded bg-[var(--emi-blue)] px-2 py-1 text-sm font-medium text-white transition-colors hover:bg-[var(--emi-blue-hover)] disabled:opacity-50"
       >
         {saving ? "Guardando..." : "Registrar"}
       </button>
@@ -381,7 +381,7 @@ export function NewTaskForm({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+        className="text-sm font-medium text-[var(--emi-blue)] hover:underline dark:brightness-125"
       >
         + Agendar pendiente
       </button>
@@ -424,7 +424,7 @@ export function NewTaskForm({
       <button
         type="submit"
         disabled={saving}
-        className="rounded bg-black px-2 py-1 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-black"
+        className="rounded bg-[var(--emi-blue)] px-2 py-1 text-sm font-medium text-white transition-colors hover:bg-[var(--emi-blue-hover)] disabled:opacity-50"
       >
         {saving ? "Guardando..." : "Agendar"}
       </button>

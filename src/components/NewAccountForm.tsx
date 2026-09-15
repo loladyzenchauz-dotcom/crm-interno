@@ -38,7 +38,7 @@ export default function NewAccountForm({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="rounded-lg bg-black px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200"
+        className="rounded-lg bg-[var(--emi-blue)] px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-[var(--emi-blue-hover)]"
       >
         + Nueva cuenta
       </button>
@@ -72,7 +72,7 @@ export default function NewAccountForm({
       <button
         type="submit"
         disabled={saving}
-        className="rounded bg-black px-2 py-1 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-black"
+        className="rounded bg-[var(--emi-blue)] px-2 py-1 text-sm font-medium text-white transition-colors hover:bg-[var(--emi-blue-hover)] disabled:opacity-50"
       >
         {saving ? "Guardando..." : "Crear"}
       </button>

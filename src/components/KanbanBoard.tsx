@@ -19,6 +19,7 @@ import {
   CHANNELS,
   MeetingScheduledThisWeek,
   STAGES,
+  STAGE_COLORS,
   Stage,
   Summary,
 } from "@/lib/types";
@@ -34,14 +35,16 @@ function SummaryBar({ summary }: { summary: Summary | null }) {
   }
 
   return (
-    <div className="mx-6 mt-4 rounded-xl border border-black/10 p-4 dark:border-white/10">
+    <div className="mx-6 mt-4 rounded-xl border border-black/10 bg-[var(--emi-blue-soft)] p-4 dark:border-white/10">
       <div className="flex flex-wrap gap-6">
         <div>
-          <p className="text-2xl font-semibold">{summary.accountsProspecting}</p>
+          <p className="text-2xl font-semibold text-[var(--emi-blue)]">
+            {summary.accountsProspecting}
+          </p>
           <p className="text-xs text-neutral-500">Cuentas en prospección activa</p>
         </div>
         <div>
-          <p className="text-2xl font-semibold">
+          <p className="text-2xl font-semibold text-[var(--emi-purple)]">
             {summary.meetingsThisWeek.length}
           </p>
           <p className="text-xs text-neutral-500">
@@ -59,7 +62,7 @@ function SummaryBar({ summary }: { summary: Summary | null }) {
       </div>
       {summary.meetingsThisWeek.length > 0 && (
         <details className="mt-3">
-          <summary className="cursor-pointer text-xs text-neutral-500">
+          <summary className="cursor-pointer text-xs font-medium text-[var(--emi-blue)]">
             Ver detalle
           </summary>
           <ul className="mt-2 flex flex-col gap-1">
@@ -76,7 +79,7 @@ function SummaryBar({ summary }: { summary: Summary | null }) {
                 </span>
                 <Link
                   href={`/accounts/${m.accountId}`}
-                  className="font-medium hover:underline"
+                  className="font-medium text-[var(--emi-navy)] hover:underline dark:text-white"
                 >
                   {m.accountName}
                 </Link>
@@ -98,8 +101,9 @@ function AccountCard({ account }: { account: Account }) {
     ? {
         transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
         zIndex: 10,
+        borderLeftColor: STAGE_COLORS[account.stage],
       }
-    : undefined;
+    : { borderLeftColor: STAGE_COLORS[account.stage] };
 
   return (
     <div
@@ -107,7 +111,7 @@ function AccountCard({ account }: { account: Account }) {
       style={style}
       {...listeners}
       {...attributes}
-      className={`rounded-lg border border-black/10 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-neutral-900 ${
+      className={`rounded-lg border border-black/10 border-l-4 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-neutral-900 ${
         isDragging ? "opacity-50" : ""
       }`}
     >
@@ -126,7 +130,7 @@ function AccountCard({ account }: { account: Account }) {
             rel="noreferrer"
             onClick={(e) => e.stopPropagation()}
             title="Stakeholder map (Sales Navigator)"
-            className="shrink-0 text-xs text-neutral-500 hover:text-blue-600 dark:hover:text-blue-400"
+            className="shrink-0 text-xs text-neutral-500 hover:text-[var(--emi-blue)]"
           >
             🔗
           </a>
@@ -149,16 +153,24 @@ function Column({
   accounts: Account[];
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage });
+  const color = STAGE_COLORS[stage];
 
   return (
     <div
       ref={setNodeRef}
-      className={`flex w-72 shrink-0 flex-col gap-2 rounded-xl p-3 transition-colors ${
+      style={{ borderTopColor: color }}
+      className={`flex w-72 shrink-0 flex-col gap-2 rounded-xl border-t-4 p-3 transition-colors ${
         isOver ? "bg-black/5 dark:bg-white/10" : "bg-black/[.03] dark:bg-white/5"
       }`}
     >
       <div className="flex items-center justify-between px-1">
-        <h2 className="text-sm font-semibold">{label}</h2>
+        <h2 className="flex items-center gap-2 text-sm font-semibold">
+          <span
+            className="inline-block h-2 w-2 shrink-0 rounded-full"
+            style={{ backgroundColor: color }}
+          />
+          {label}
+        </h2>
         <span className="text-xs text-neutral-500">{accounts.length}</span>
       </div>
       <div className="flex flex-1 flex-col gap-2">
@@ -251,7 +263,10 @@ export default function KanbanBoard() {
       </div>
       <DragOverlay>
         {activeAccount ? (
-          <div className="w-64 rounded-lg border border-black/10 bg-white p-3 shadow-md dark:border-white/10 dark:bg-neutral-900">
+          <div
+            style={{ borderLeftColor: STAGE_COLORS[activeAccount.stage] }}
+            className="w-64 rounded-lg border border-black/10 border-l-4 bg-white p-3 shadow-md dark:border-white/10 dark:bg-neutral-900"
+          >
             <p className="font-medium">{activeAccount.name}</p>
           </div>
         ) : null}
