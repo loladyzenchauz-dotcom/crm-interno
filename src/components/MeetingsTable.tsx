@@ -11,6 +11,9 @@ import {
   QUALIFIED_OPTIONS,
   QUALIFIED_COLORS,
   QualifiedStatus,
+  NACHO_REVIEW_OPTIONS,
+  NACHO_REVIEW_COLORS,
+  NachoReviewStatus,
 } from "@/lib/types";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -181,6 +184,7 @@ function NewMeetingForm({ onCreated }: { onCreated: () => void }) {
     sqcValue: "",
     note: "",
     qualified: "",
+    qualifiedByNacho: "",
   });
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
@@ -305,6 +309,16 @@ function NewMeetingForm({ onCreated }: { onCreated: () => void }) {
           <option value="">Calificada?</option>
           <option value="Si">Calificada: Sí</option>
           <option value="No">Calificada: No</option>
+          <option value="En proceso">Calificada: En proceso</option>
+        </select>
+        <select
+          value={form.qualifiedByNacho}
+          onChange={(e) => set("qualifiedByNacho", e.target.value)}
+          className="rounded border border-black/10 bg-transparent px-2 py-1 text-sm dark:border-white/10"
+        >
+          <option value="">Registrada por Nacho?</option>
+          <option value="Si">Registrada por Nacho: Sí</option>
+          <option value="No">Registrada por Nacho: No</option>
         </select>
       </div>
       <textarea
@@ -371,11 +385,13 @@ function MeetingRow({
   onSave,
   onStatusChange,
   onQualifiedChange,
+  onNachoReviewChange,
 }: {
   meeting: Meeting;
   onSave: (id: string, fields: EditableFields) => Promise<void>;
   onStatusChange: (id: string, status: MeetingStatus) => void;
   onQualifiedChange: (id: string, qualified: QualifiedStatus) => void;
+  onNachoReviewChange: (id: string, qualifiedByNacho: NachoReviewStatus) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -541,6 +557,15 @@ function MeetingRow({
           onChange={(qualified) => onQualifiedChange(m.id, qualified)}
         />
       </td>
+      <td className="px-3 py-2">
+        <ColoredSelect<NachoReviewStatus>
+          value={m.qualifiedByNacho as NachoReviewStatus | undefined}
+          options={NACHO_REVIEW_OPTIONS}
+          colors={NACHO_REVIEW_COLORS}
+          emptyLabel="Sin definir"
+          onChange={(qualifiedByNacho) => onNachoReviewChange(m.id, qualifiedByNacho)}
+        />
+      </td>
       <td className="max-w-[220px] px-3 py-2 text-xs text-neutral-500">
         {editing ? (
           <textarea
@@ -608,6 +633,13 @@ export default function MeetingsTable({ initial }: { initial: Meeting[] }) {
   async function handleQualifiedChange(id: string, qualified: QualifiedStatus) {
     setMeetings((prev) => prev.map((m) => (m.id === id ? { ...m, qualified } : m)));
     await patchMeeting(id, { qualified });
+  }
+
+  async function handleNachoReviewChange(id: string, qualifiedByNacho: NachoReviewStatus) {
+    setMeetings((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, qualifiedByNacho } : m))
+    );
+    await patchMeeting(id, { qualifiedByNacho });
   }
 
   async function handleSaveFields(id: string, fields: EditableFields) {
@@ -740,6 +772,7 @@ export default function MeetingsTable({ initial }: { initial: Meeting[] }) {
               <th className="px-3 py-2 font-normal">AE</th>
               <th className="px-3 py-2 font-normal">SQC</th>
               <th className="px-3 py-2 font-normal">Calificada</th>
+              <th className="px-3 py-2 font-normal">Registrada (Nacho)</th>
               <th className="px-3 py-2 font-normal">Nota</th>
               <th className="px-3 py-2 font-normal">Acciones</th>
             </tr>
@@ -752,11 +785,12 @@ export default function MeetingsTable({ initial }: { initial: Meeting[] }) {
                 onSave={handleSaveFields}
                 onStatusChange={handleStatusChange}
                 onQualifiedChange={handleQualifiedChange}
+                onNachoReviewChange={handleNachoReviewChange}
               />
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={11} className="px-3 py-6 text-center text-sm text-neutral-400">
+                <td colSpan={12} className="px-3 py-6 text-center text-sm text-neutral-400">
                   No hay reuniones que coincidan.
                 </td>
               </tr>

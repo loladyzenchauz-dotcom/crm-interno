@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+// Misma tipografía que usa Emi Labs en su sitio (Inter), autohospedada vía
+// @fontsource para no depender de Google Fonts en el build.
+import "@fontsource-variable/inter";
 import "./globals.css";
 
 export const metadata: Metadata = {

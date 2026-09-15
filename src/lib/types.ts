@@ -170,6 +170,18 @@ export const QUALIFIED_COLORS: Record<QualifiedStatus, string> = {
   "En proceso": "#3366ff",
 };
 
+// Segunda columna de calificación del Excel: si Nacho (el manager) ya
+// registró/revisó esa reunión. Distinta de "Calificada" (si la oportunidad
+// en sí está calificada) — por eso va en su propia columna editable.
+export type NachoReviewStatus = "Si" | "No";
+
+export const NACHO_REVIEW_OPTIONS: NachoReviewStatus[] = ["Si", "No"];
+
+export const NACHO_REVIEW_COLORS: Record<NachoReviewStatus, string> = {
+  Si: "#10b981",
+  No: "#71717a",
+};
+
 export interface Meeting {
   id: string;
   forMonth?: string; // "Para que mes va el SQC"
