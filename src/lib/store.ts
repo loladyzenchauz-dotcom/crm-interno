@@ -7,6 +7,9 @@ import {
   Stage,
   Channel,
   AccountWithRelations,
+  ACTIVE_PROSPECTING_STAGES,
+  MeetingScheduledThisWeek,
+  Summary,
 } from "./types";
 
 function toDateStr(d: unknown): string {
@@ -187,6 +190,42 @@ export async function createTouchpoint(input: {
     ]
   );
   return mapTouchpoint(res.rows[0]);
+}
+
+export async function getSummary(): Promise<Summary> {
+  const pool = getPool();
+
+  const [accountsRes, meetingsRes] = await Promise.all([
+    pool.query(
+      "select count(*)::int as count from accounts where stage = any($1::text[])",
+      [ACTIVE_PROSPECTING_STAGES]
+    ),
+    pool.query(
+      `select t.id as touchpoint_id, t.date, t.channel,
+              a.id as account_id, a.name as account_name,
+              c.id as contact_id, c.name as contact_name
+       from touchpoints t
+       join accounts a on a.id = t.account_id
+       join contacts c on c.id = t.contact_id
+       where t.outcome = 'reunion_agendada'
+         and t.date >= date_trunc('week', current_date)::date
+         and t.date < (date_trunc('week', current_date) + interval '7 days')::date
+       order by t.date desc`
+    ),
+  ]);
+
+  return {
+    accountsProspecting: accountsRes.rows[0]?.count ?? 0,
+    meetingsThisWeek: meetingsRes.rows.map((row) => ({
+      touchpointId: row.touchpoint_id as string,
+      date: toDateStr(row.date),
+      channel: row.channel as Channel,
+      accountId: row.account_id as string,
+      accountName: row.account_name as string,
+      contactId: row.contact_id as string,
+      contactName: row.contact_name as string,
+    })),
+  };
 }
 
 export async function createTask(input: {

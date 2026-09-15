@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { CHANNELS, Contact } from "@/lib/types";
+import { CHANNELS, Contact, OUTCOMES } from "@/lib/types";
 
 export function NewContactForm({ accountId }: { accountId: string }) {
   const router = useRouter();
@@ -86,6 +86,7 @@ export function NewTouchpointForm({
   const [contactId, setContactId] = useState(contacts[0]?.id ?? "");
   const [channel, setChannel] = useState(CHANNELS[0].id);
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [outcome, setOutcome] = useState(OUTCOMES[0].id);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -101,7 +102,7 @@ export function NewTouchpointForm({
     await fetch("/api/touchpoints", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contactId, accountId, channel, date }),
+      body: JSON.stringify({ contactId, accountId, channel, date, outcome }),
     });
     setSaving(false);
     setOpen(false);
@@ -154,6 +155,17 @@ export function NewTouchpointForm({
         onChange={(e) => setDate(e.target.value)}
         className="rounded border border-black/10 bg-transparent px-2 py-1 text-sm dark:border-white/10"
       />
+      <select
+        value={outcome}
+        onChange={(e) => setOutcome(e.target.value as typeof outcome)}
+        className="rounded border border-black/10 bg-transparent px-2 py-1 text-sm dark:border-white/10"
+      >
+        {OUTCOMES.map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.label}
+          </option>
+        ))}
+      </select>
       <button
         type="submit"
         disabled={saving}

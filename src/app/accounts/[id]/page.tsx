@@ -102,37 +102,70 @@ export default async function AccountDetailPage({
                     <span className="text-xs text-neutral-500">{contact.role}</span>
                   )}
                 </div>
-                <ul className="mt-2 flex flex-col gap-1">
-                  {contactTouchpoints
-                    .sort((a, b) => (a.date < b.date ? 1 : -1))
-                    .map((tp) => (
-                      <li
-                        key={tp.id}
-                        className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400"
-                      >
-                        <span className="w-24 shrink-0 text-xs text-neutral-500">
-                          {format(new Date(tp.date), "dd/MM/yyyy")}
-                        </span>
-                        <span className="rounded bg-black/5 px-1.5 py-0.5 text-xs dark:bg-white/10">
-                          {CHANNELS.find((c) => c.id === tp.channel)?.label}
-                        </span>
-                        {tp.outcome && (
-                          <span className="text-xs">
-                            {tp.outcome === "respondio"
-                              ? "✓ respondió"
-                              : tp.outcome === "no_respondio"
-                              ? "sin respuesta"
-                              : "pendiente"}
-                          </span>
-                        )}
-                      </li>
-                    ))}
-                  {contactTouchpoints.length === 0 && (
-                    <li className="text-sm text-neutral-400">
-                      Sin touchpoints registrados
-                    </li>
-                  )}
-                </ul>
+                <table className="mt-2 w-full max-w-xs table-fixed border-collapse text-sm">
+                  <thead>
+                    <tr className="text-xs text-neutral-500">
+                      {CHANNELS.map((c) => (
+                        <th key={c.id} className="border-b border-black/10 pb-1 text-left font-normal dark:border-white/10">
+                          {c.label}
+                        </th>
+                      ))}
+                      <th className="border-b border-black/10 pb-1 text-left font-normal dark:border-white/10">
+                        Total
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      {CHANNELS.map((c) => (
+                        <td key={c.id} className="pt-1 font-medium">
+                          {
+                            contactTouchpoints.filter((t) => t.channel === c.id)
+                              .length
+                          }
+                        </td>
+                      ))}
+                      <td className="pt-1 font-medium">
+                        {contactTouchpoints.length}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                {contactTouchpoints.length > 0 && (
+                  <details className="mt-2">
+                    <summary className="cursor-pointer text-xs text-neutral-500">
+                      Ver detalle ({contactTouchpoints.length})
+                    </summary>
+                    <ul className="mt-2 flex flex-col gap-1">
+                      {contactTouchpoints
+                        .sort((a, b) => (a.date < b.date ? 1 : -1))
+                        .map((tp) => (
+                          <li
+                            key={tp.id}
+                            className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400"
+                          >
+                            <span className="w-24 shrink-0 text-xs text-neutral-500">
+                              {format(new Date(tp.date), "dd/MM/yyyy")}
+                            </span>
+                            <span className="rounded bg-black/5 px-1.5 py-0.5 text-xs dark:bg-white/10">
+                              {CHANNELS.find((c) => c.id === tp.channel)?.label}
+                            </span>
+                            {tp.outcome && (
+                              <span className="text-xs">
+                                {tp.outcome === "respondio"
+                                  ? "✓ respondió"
+                                  : tp.outcome === "no_respondio"
+                                  ? "sin respuesta"
+                                  : tp.outcome === "reunion_agendada"
+                                  ? "📅 reunión agendada"
+                                  : "pendiente"}
+                              </span>
+                            )}
+                          </li>
+                        ))}
+                    </ul>
+                  </details>
+                )}
               </div>
             );
           })}

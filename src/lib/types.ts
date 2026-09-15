@@ -17,6 +17,15 @@ export const STAGES: { id: Stage; label: string }[] = [
   { id: "disqualified", label: "Disqualified" },
 ];
 
+// Stages that count as "en prospección activa" para el resumen del tablero.
+// Quedan afuera bad_fit, paused y disqualified porque ya no se está trabajando esa cuenta.
+export const ACTIVE_PROSPECTING_STAGES: Stage[] = [
+  "to_contact",
+  "working",
+  "meeting_scheduled",
+  "ae_sales_process",
+];
+
 export type Channel = "whatsapp" | "linkedin" | "email" | "call";
 
 export const CHANNELS: { id: Channel; label: string }[] = [
@@ -26,6 +35,15 @@ export const CHANNELS: { id: Channel; label: string }[] = [
   { id: "call", label: "Llamada" },
 ];
 
+export type Outcome = "respondio" | "no_respondio" | "pendiente" | "reunion_agendada";
+
+export const OUTCOMES: { id: Outcome; label: string }[] = [
+  { id: "pendiente", label: "Pendiente" },
+  { id: "respondio", label: "Respondió" },
+  { id: "no_respondio", label: "Sin respuesta" },
+  { id: "reunion_agendada", label: "Reunión agendada" },
+];
+
 export interface Touchpoint {
   id: string;
   contactId: string;
@@ -33,7 +51,7 @@ export interface Touchpoint {
   channel: Channel;
   date: string; // ISO date
   notes?: string;
-  outcome?: "respondio" | "no_respondio" | "pendiente";
+  outcome?: Outcome;
 }
 
 export interface Contact {
@@ -70,4 +88,19 @@ export interface AccountWithRelations extends Account {
   contacts: Contact[];
   touchpoints: Touchpoint[];
   tasks: Task[];
+}
+
+export interface MeetingScheduledThisWeek {
+  touchpointId: string;
+  date: string;
+  channel: Channel;
+  accountId: string;
+  accountName: string;
+  contactId: string;
+  contactName: string;
+}
+
+export interface Summary {
+  accountsProspecting: number;
+  meetingsThisWeek: MeetingScheduledThisWeek[];
 }

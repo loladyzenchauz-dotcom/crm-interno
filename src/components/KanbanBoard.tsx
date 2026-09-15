@@ -14,8 +14,81 @@ import {
 import { useDroppable } from "@dnd-kit/core";
 import { useDraggable } from "@dnd-kit/core";
 import Link from "next/link";
-import { Account, STAGES, Stage } from "@/lib/types";
+import {
+  Account,
+  CHANNELS,
+  MeetingScheduledThisWeek,
+  STAGES,
+  Stage,
+  Summary,
+} from "@/lib/types";
 import NewAccountForm from "./NewAccountForm";
+import { format } from "date-fns";
+
+function SummaryBar({ summary }: { summary: Summary | null }) {
+  if (!summary) return null;
+
+  const byChannel: Record<string, MeetingScheduledThisWeek[]> = {};
+  for (const m of summary.meetingsThisWeek) {
+    (byChannel[m.channel] ??= []).push(m);
+  }
+
+  return (
+    <div className="mx-6 mt-4 rounded-xl border border-black/10 p-4 dark:border-white/10">
+      <div className="flex flex-wrap gap-6">
+        <div>
+          <p className="text-2xl font-semibold">{summary.accountsProspecting}</p>
+          <p className="text-xs text-neutral-500">Cuentas en prospección activa</p>
+        </div>
+        <div>
+          <p className="text-2xl font-semibold">
+            {summary.meetingsThisWeek.length}
+          </p>
+          <p className="text-xs text-neutral-500">
+            Reuniones agendadas esta semana
+          </p>
+        </div>
+        {CHANNELS.map((c) => (
+          <div key={c.id}>
+            <p className="text-2xl font-semibold">
+              {(byChannel[c.id] ?? []).length}
+            </p>
+            <p className="text-xs text-neutral-500">Por {c.label}</p>
+          </div>
+        ))}
+      </div>
+      {summary.meetingsThisWeek.length > 0 && (
+        <details className="mt-3">
+          <summary className="cursor-pointer text-xs text-neutral-500">
+            Ver detalle
+          </summary>
+          <ul className="mt-2 flex flex-col gap-1">
+            {summary.meetingsThisWeek.map((m) => (
+              <li
+                key={m.touchpointId}
+                className="flex items-center gap-2 text-sm"
+              >
+                <span className="w-24 shrink-0 text-xs text-neutral-500">
+                  {format(new Date(m.date), "dd/MM/yyyy")}
+                </span>
+                <span className="rounded bg-black/5 px-1.5 py-0.5 text-xs dark:bg-white/10">
+                  {CHANNELS.find((c) => c.id === m.channel)?.label}
+                </span>
+                <Link
+                  href={`/accounts/${m.accountId}`}
+                  className="font-medium hover:underline"
+                >
+                  {m.accountName}
+                </Link>
+                <span className="text-neutral-500">— {m.contactName}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </div>
+  );
+}
 
 function AccountCard({ account }: { account: Account }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
@@ -85,6 +158,7 @@ function Column({
 
 export default function KanbanBoard() {
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [summary, setSummary] = useState<Summary | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -95,6 +169,9 @@ export default function KanbanBoard() {
         setAccounts(data);
         setLoading(false);
       });
+    fetch("/api/summary")
+      .then((r) => r.json())
+      .then(setSummary);
   }
 
   useEffect(() => {
@@ -147,6 +224,7 @@ export default function KanbanBoard() {
       <div className="flex items-center justify-end px-6 pt-4">
         <NewAccountForm onCreated={reload} />
       </div>
+      <SummaryBar summary={summary} />
       <div className="flex gap-3 overflow-x-auto p-6">
         {STAGES.map((s) => (
           <Column
