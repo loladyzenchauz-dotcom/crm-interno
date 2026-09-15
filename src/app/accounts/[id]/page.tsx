@@ -35,7 +35,7 @@ export default async function AccountDetailPage({
     <div className="mx-auto max-w-3xl px-6 py-8">
       <div className="flex items-center justify-between">
         <Link
-          href="/"
+          href="/crm"
           className="text-sm text-neutral-500 hover:text-[var(--emi-blue)] hover:underline"
         >
           ← Volver al tablero

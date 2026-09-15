@@ -45,7 +45,27 @@ create table if not exists tasks (
   notes text
 );
 
+create table if not exists meetings (
+  id text primary key,
+  for_month text,
+  meeting_date date,
+  company text not null,
+  contact_name text,
+  contact_role text,
+  linkedin_url text,
+  type text,
+  channel text,
+  status text,
+  ae text,
+  sqc_value numeric,
+  note text,
+  qualified text,
+  qualified_by_nacho text,
+  created_at timestamptz not null default now()
+);
+
 create index if not exists idx_contacts_account on contacts(account_id);
 create index if not exists idx_touchpoints_account on touchpoints(account_id);
 create index if not exists idx_touchpoints_contact on touchpoints(contact_id);
 create index if not exists idx_tasks_account on tasks(account_id);
+create index if not exists idx_meetings_date on meetings(meeting_date);

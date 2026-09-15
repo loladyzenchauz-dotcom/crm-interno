@@ -10,6 +10,9 @@ import {
   ACTIVE_PROSPECTING_STAGES,
   MeetingScheduledThisWeek,
   Summary,
+  Meeting,
+  MeetingType,
+  MeetingStatus,
 } from "./types";
 
 function toDateStr(d: unknown): string {
@@ -65,6 +68,30 @@ function mapTask(row: Record<string, unknown>): Task {
     scheduledDate: toDateStr(row.scheduled_date),
     done: Boolean(row.done),
     notes: (row.notes as string) ?? undefined,
+  };
+}
+
+function mapMeeting(row: Record<string, unknown>): Meeting {
+  return {
+    id: row.id as string,
+    forMonth: (row.for_month as string) ?? undefined,
+    meetingDate: row.meeting_date ? toDateStr(row.meeting_date) : undefined,
+    company: row.company as string,
+    contactName: (row.contact_name as string) ?? undefined,
+    contactRole: (row.contact_role as string) ?? undefined,
+    linkedinUrl: (row.linkedin_url as string) ?? undefined,
+    type: (row.type as MeetingType) ?? undefined,
+    channel: (row.channel as string) ?? undefined,
+    status: (row.status as MeetingStatus) ?? undefined,
+    ae: (row.ae as string) ?? undefined,
+    sqcValue:
+      row.sqc_value === null || row.sqc_value === undefined
+        ? undefined
+        : Number(row.sqc_value),
+    note: (row.note as string) ?? undefined,
+    qualified: (row.qualified as string) ?? undefined,
+    qualifiedByNacho: (row.qualified_by_nacho as string) ?? undefined,
+    createdAt: new Date(row.created_at as string).toISOString(),
   };
 }
 
@@ -295,6 +322,121 @@ export async function getSummary(): Promise<Summary> {
       contactName: row.contact_name as string,
     })),
   };
+}
+
+export async function listMeetings(): Promise<Meeting[]> {
+  const pool = getPool();
+  const res = await pool.query(
+    `select * from meetings
+     order by meeting_date desc nulls last, created_at desc`
+  );
+  return res.rows.map(mapMeeting);
+}
+
+export async function createMeeting(input: {
+  forMonth?: string;
+  meetingDate?: string;
+  company: string;
+  contactName?: string;
+  contactRole?: string;
+  linkedinUrl?: string;
+  type?: MeetingType;
+  channel?: string;
+  status?: MeetingStatus;
+  ae?: string;
+  sqcValue?: number;
+  note?: string;
+  qualified?: string;
+  qualifiedByNacho?: string;
+}): Promise<Meeting> {
+  const pool = getPool();
+  const id = newId("mtg");
+  const res = await pool.query(
+    `insert into meetings
+       (id, for_month, meeting_date, company, contact_name, contact_role,
+        linkedin_url, type, channel, status, ae, sqc_value, note,
+        qualified, qualified_by_nacho)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+     returning *`,
+    [
+      id,
+      input.forMonth || null,
+      input.meetingDate || null,
+      input.company,
+      input.contactName || null,
+      input.contactRole || null,
+      input.linkedinUrl || null,
+      input.type || null,
+      input.channel || null,
+      input.status || "Reunión Agendada",
+      input.ae || null,
+      input.sqcValue ?? null,
+      input.note || null,
+      input.qualified || null,
+      input.qualifiedByNacho || null,
+    ]
+  );
+  return mapMeeting(res.rows[0]);
+}
+
+export async function updateMeeting(
+  id: string,
+  fields: Partial<{
+    forMonth: string;
+    meetingDate: string;
+    company: string;
+    contactName: string;
+    contactRole: string;
+    linkedinUrl: string;
+    type: MeetingType;
+    channel: string;
+    status: MeetingStatus;
+    ae: string;
+    sqcValue: number;
+    note: string;
+    qualified: string;
+    qualifiedByNacho: string;
+  }>
+): Promise<Meeting | null> {
+  const pool = getPool();
+  const columnByField: Record<string, string> = {
+    forMonth: "for_month",
+    meetingDate: "meeting_date",
+    company: "company",
+    contactName: "contact_name",
+    contactRole: "contact_role",
+    linkedinUrl: "linkedin_url",
+    type: "type",
+    channel: "channel",
+    status: "status",
+    ae: "ae",
+    sqcValue: "sqc_value",
+    note: "note",
+    qualified: "qualified",
+    qualifiedByNacho: "qualified_by_nacho",
+  };
+
+  const sets: string[] = [];
+  const values: unknown[] = [];
+  let i = 1;
+  for (const [key, column] of Object.entries(columnByField)) {
+    if (key in fields) {
+      sets.push(`${column} = $${i++}`);
+      const value = (fields as Record<string, unknown>)[key];
+      values.push(value === "" ? null : value ?? null);
+    }
+  }
+  if (sets.length === 0) {
+    const res = await pool.query("select * from meetings where id = $1", [id]);
+    return res.rows[0] ? mapMeeting(res.rows[0]) : null;
+  }
+
+  values.push(id);
+  const res = await pool.query(
+    `update meetings set ${sets.join(", ")} where id = $${i} returning *`,
+    values
+  );
+  return res.rows[0] ? mapMeeting(res.rows[0]) : null;
 }
 
 export async function createTask(input: {

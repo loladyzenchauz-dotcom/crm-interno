@@ -127,3 +127,52 @@ export interface Summary {
   accountsProspecting: number;
   meetingsThisWeek: MeetingScheduledThisWeek[];
 }
+
+// --- Reuniones (tracker de "Reuniones Agendadas" del Excel) ---
+
+export type MeetingType = "Inbound" | "Outbound";
+
+export const MEETING_TYPES: MeetingType[] = ["Inbound", "Outbound"];
+
+export type MeetingStatus =
+  | "Reunión Agendada"
+  | "Discovery BDR"
+  | "Reunión Completada"
+  | "No-show"
+  | "Cancelled";
+
+export const MEETING_STATUSES: MeetingStatus[] = [
+  "Reunión Agendada",
+  "Discovery BDR",
+  "Reunión Completada",
+  "No-show",
+  "Cancelled",
+];
+
+// Color por estado, mismo criterio semántico que STAGE_COLORS.
+export const MEETING_STATUS_COLORS: Record<MeetingStatus, string> = {
+  "Reunión Agendada": "#3366ff",
+  "Discovery BDR": "#71717a",
+  "Reunión Completada": "#10b981",
+  "No-show": "#ff7a45",
+  Cancelled: "#e11d48",
+};
+
+export interface Meeting {
+  id: string;
+  forMonth?: string; // "Para que mes va el SQC"
+  meetingDate?: string; // ISO date
+  company: string;
+  contactName?: string;
+  contactRole?: string;
+  linkedinUrl?: string;
+  type?: MeetingType;
+  channel?: string;
+  status?: MeetingStatus;
+  ae?: string;
+  sqcValue?: number;
+  note?: string;
+  qualified?: string; // "Calificada" (Si/No)
+  qualifiedByNacho?: string;
+  createdAt: string;
+}
