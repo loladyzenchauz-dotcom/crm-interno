@@ -21,6 +21,13 @@ function monthLabel(key: string): string {
   return label.toUpperCase();
 }
 
+// Para el selector de filtro por mes: "Marzo 2026" (con año, por si hay varios).
+function monthFilterLabel(key: string): string {
+  const [y, m] = key.split("-").map(Number);
+  const label = format(new Date(y, m - 1, 1), "MMMM yyyy");
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
 function pct(part?: number, total?: number): string {
   if (!total) return "—";
   return `${Math.round(((part ?? 0) / total) * 100)}%`;
@@ -140,12 +147,52 @@ export default function OutreachTracker({ initial }: { initial: OutreachWeek[] }
   const [saving, setSaving] = useState(false);
   const [addingDate, setAddingDate] = useState("");
   const [adding, setAdding] = useState(false);
+  const [monthFilter, setMonthFilter] = useState("all");
+  const [weekFilter, setWeekFilter] = useState("all");
 
   const sorted = useMemo(
     () => [...weeks].sort((a, b) => a.weekStart.localeCompare(b.weekStart)),
     [weeks]
   );
   const columns = useMemo(() => buildColumns(sorted), [sorted]);
+
+  // Opciones de los selects de filtro. El de semana solo muestra las semanas
+  // del mes elegido (o todas, si no hay mes seleccionado).
+  const monthOptions = useMemo(() => {
+    const keys = Array.from(new Set(sorted.map((w) => monthKeyOf(w.weekStart))));
+    return keys.map((key) => ({ key, label: monthFilterLabel(key) }));
+  }, [sorted]);
+
+  const weekOptions = useMemo(() => {
+    return sorted
+      .filter((w) => monthFilter === "all" || monthKeyOf(w.weekStart) === monthFilter)
+      .map((w) => ({ id: w.id, label: weekLabel(w.weekStart) }));
+  }, [sorted, monthFilter]);
+
+  const visibleColumns = useMemo(() => {
+    if (weekFilter !== "all") {
+      return columns.filter((col) => col.type === "week" && col.week.id === weekFilter);
+    }
+    if (monthFilter !== "all") {
+      return columns.filter(
+        (col) =>
+          (col.type === "week" && monthKeyOf(col.week.weekStart) === monthFilter) ||
+          (col.type === "total" && col.key === monthFilter)
+      );
+    }
+    return columns;
+  }, [columns, monthFilter, weekFilter]);
+
+  function onMonthFilterChange(value: string) {
+    setMonthFilter(value);
+    // Si la semana elegida no pertenece al nuevo mes, la limpio.
+    if (weekFilter !== "all") {
+      const w = sorted.find((x) => x.id === weekFilter);
+      if (!w || (value !== "all" && monthKeyOf(w.weekStart) !== value)) {
+        setWeekFilter("all");
+      }
+    }
+  }
 
   async function reload() {
     const res = await fetch("/api/outreach-weeks");
@@ -323,6 +370,50 @@ export default function OutreachTracker({ initial }: { initial: OutreachWeek[] }
         </button>
       </div>
 
+      <div className="flex flex-wrap items-center gap-4 rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-zinc-600 dark:text-zinc-400">Mes:</span>
+          <select
+            value={monthFilter}
+            onChange={(e) => onMonthFilterChange(e.target.value)}
+            className="rounded border border-zinc-300 bg-white px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
+          >
+            <option value="all">Todos los meses</option>
+            {monthOptions.map((m) => (
+              <option key={m.key} value={m.key}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-zinc-600 dark:text-zinc-400">Semana:</span>
+          <select
+            value={weekFilter}
+            onChange={(e) => setWeekFilter(e.target.value)}
+            className="rounded border border-zinc-300 bg-white px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
+          >
+            <option value="all">Todas las semanas</option>
+            {weekOptions.map((w) => (
+              <option key={w.id} value={w.id}>
+                {w.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        {(monthFilter !== "all" || weekFilter !== "all") && (
+          <button
+            onClick={() => {
+              setMonthFilter("all");
+              setWeekFilter("all");
+            }}
+            className="rounded bg-zinc-100 px-2 py-1 text-xs font-medium text-[var(--emi-navy)] hover:bg-zinc-200 dark:bg-zinc-800 dark:text-white"
+          >
+            Limpiar filtros
+          </button>
+        )}
+      </div>
+
       <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
         <table className="border-collapse text-sm">
           <thead>
@@ -330,7 +421,7 @@ export default function OutreachTracker({ initial }: { initial: OutreachWeek[] }
               <th className="sticky left-0 z-20 bg-[var(--emi-navy)] px-3 py-2 text-left text-xs font-bold uppercase tracking-wide text-white">
                 Métrica
               </th>
-              {columns.map((col) =>
+              {visibleColumns.map((col) =>
                 col.type === "week" ? (
                   <th key={col.week.id} className={weekHeadCls}>
                     <div>{weekLabel(col.week.weekStart)}</div>
@@ -373,7 +464,7 @@ export default function OutreachTracker({ initial }: { initial: OutreachWeek[] }
           <tbody>
             {/* EMAIL */}
             <tr>
-              <td colSpan={columns.length + 1} className={sectionHeaderCls}>
+              <td colSpan={visibleColumns.length + 1} className={sectionHeaderCls}>
                 Email
               </td>
             </tr>
@@ -386,7 +477,7 @@ export default function OutreachTracker({ initial }: { initial: OutreachWeek[] }
             ].map((row) => (
               <tr key={row.label} className="odd:bg-zinc-50 dark:odd:bg-zinc-900/40">
                 <td className={rowLabelCls}>{row.label}</td>
-                {columns.map((col) => (
+                {visibleColumns.map((col) => (
                   <td key={col.type === "week" ? col.week.id : col.key} className={col.type === "total" ? totalCellCls : cellCls}>
                     {row.render(col)}
                   </td>
@@ -396,7 +487,7 @@ export default function OutreachTracker({ initial }: { initial: OutreachWeek[] }
 
             {/* LINKEDIN */}
             <tr>
-              <td colSpan={columns.length + 1} className={sectionHeaderCls}>
+              <td colSpan={visibleColumns.length + 1} className={sectionHeaderCls}>
                 LinkedIn
               </td>
             </tr>
@@ -408,7 +499,7 @@ export default function OutreachTracker({ initial }: { initial: OutreachWeek[] }
             ].map((row) => (
               <tr key={row.label} className="odd:bg-zinc-50 dark:odd:bg-zinc-900/40">
                 <td className={rowLabelCls}>{row.label}</td>
-                {columns.map((col) => (
+                {visibleColumns.map((col) => (
                   <td key={col.type === "week" ? col.week.id : col.key} className={col.type === "total" ? totalCellCls : cellCls}>
                     {row.render(col)}
                   </td>
@@ -418,7 +509,7 @@ export default function OutreachTracker({ initial }: { initial: OutreachWeek[] }
 
             {/* WHATSAPP */}
             <tr>
-              <td colSpan={columns.length + 1} className={sectionHeaderCls}>
+              <td colSpan={visibleColumns.length + 1} className={sectionHeaderCls}>
                 WhatsApp
               </td>
             </tr>
@@ -430,7 +521,7 @@ export default function OutreachTracker({ initial }: { initial: OutreachWeek[] }
             ].map((row) => (
               <tr key={row.label} className="odd:bg-zinc-50 dark:odd:bg-zinc-900/40">
                 <td className={rowLabelCls}>{row.label}</td>
-                {columns.map((col) => (
+                {visibleColumns.map((col) => (
                   <td key={col.type === "week" ? col.week.id : col.key} className={col.type === "total" ? totalCellCls : cellCls}>
                     {row.render(col)}
                   </td>
@@ -440,7 +531,7 @@ export default function OutreachTracker({ initial }: { initial: OutreachWeek[] }
 
             {/* LLAMADAS */}
             <tr>
-              <td colSpan={columns.length + 1} className={sectionHeaderCls}>
+              <td colSpan={visibleColumns.length + 1} className={sectionHeaderCls}>
                 Llamadas
               </td>
             </tr>
@@ -452,7 +543,7 @@ export default function OutreachTracker({ initial }: { initial: OutreachWeek[] }
             ].map((row) => (
               <tr key={row.label} className="odd:bg-zinc-50 dark:odd:bg-zinc-900/40">
                 <td className={rowLabelCls}>{row.label}</td>
-                {columns.map((col) => (
+                {visibleColumns.map((col) => (
                   <td key={col.type === "week" ? col.week.id : col.key} className={col.type === "total" ? totalCellCls : cellCls}>
                     {row.render(col)}
                   </td>
@@ -462,7 +553,7 @@ export default function OutreachTracker({ initial }: { initial: OutreachWeek[] }
 
             {/* TOTALES */}
             <tr>
-              <td colSpan={columns.length + 1} className={sectionHeaderCls}>
+              <td colSpan={visibleColumns.length + 1} className={sectionHeaderCls}>
                 Totales
               </td>
             </tr>
@@ -477,7 +568,7 @@ export default function OutreachTracker({ initial }: { initial: OutreachWeek[] }
             ].map((row) => (
               <tr key={row.label} className="odd:bg-zinc-50 font-semibold dark:odd:bg-zinc-900/40">
                 <td className={rowLabelCls}>{row.label}</td>
-                {columns.map((col) => (
+                {visibleColumns.map((col) => (
                   <td key={col.type === "week" ? col.week.id : col.key} className={col.type === "total" ? totalCellCls : cellCls}>
                     {row.render(col)}
                   </td>
@@ -489,6 +580,11 @@ export default function OutreachTracker({ initial }: { initial: OutreachWeek[] }
         {sorted.length === 0 && (
           <div className="p-6 text-center text-sm text-zinc-500">
             Todavía no hay semanas cargadas.
+          </div>
+        )}
+        {sorted.length > 0 && visibleColumns.length === 0 && (
+          <div className="p-6 text-center text-sm text-zinc-500">
+            No hay semanas para ese filtro.
           </div>
         )}
       </div>
