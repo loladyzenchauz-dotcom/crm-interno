@@ -469,12 +469,6 @@ export default function OutreachTracker({ initial }: { initial: OutreachWeek[] }
         </div>
       </div>
 
-      <div className="rounded-xl border border-[var(--emi-blue)]/20 bg-[var(--emi-blue-soft)] p-4 text-sm text-zinc-700 dark:text-zinc-300">
-        Misma estructura que tu Excel: semanas como columnas, agrupadas por canal, con el total del
-        mes al final de cada grupo. Enviados, Open Rate, Replies y Reuniones se cargan a mano — el
-        Reply % y los totales se calculan solos.
-      </div>
-
       <div className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
         <span className="text-sm text-zinc-600 dark:text-zinc-400">+ Agregar semana:</span>
         <input
