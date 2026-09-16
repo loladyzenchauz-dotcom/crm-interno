@@ -13,6 +13,7 @@ import {
   Meeting,
   MeetingType,
   MeetingStatus,
+  OutreachWeek,
 } from "./types";
 
 function toDateStr(d: unknown): string {
@@ -91,6 +92,31 @@ function mapMeeting(row: Record<string, unknown>): Meeting {
     note: (row.note as string) ?? undefined,
     qualified: (row.qualified as string) ?? undefined,
     qualifiedByNacho: (row.qualified_by_nacho as string) ?? undefined,
+    createdAt: new Date(row.created_at as string).toISOString(),
+  };
+}
+
+function num(v: unknown): number | undefined {
+  return v === null || v === undefined ? undefined : Number(v);
+}
+
+function mapOutreachWeek(row: Record<string, unknown>): OutreachWeek {
+  return {
+    id: row.id as string,
+    weekStart: toDateStr(row.week_start),
+    emailEnviados: num(row.email_enviados),
+    emailOpenRate: num(row.email_open_rate),
+    emailReplies: num(row.email_replies),
+    emailReuniones: num(row.email_reuniones),
+    linkedinEnviados: num(row.linkedin_enviados),
+    linkedinReplies: num(row.linkedin_replies),
+    linkedinReuniones: num(row.linkedin_reuniones),
+    whatsappEnviados: num(row.whatsapp_enviados),
+    whatsappReplies: num(row.whatsapp_replies),
+    whatsappReuniones: num(row.whatsapp_reuniones),
+    llamadasEnviados: num(row.llamadas_enviados),
+    llamadasReplies: num(row.llamadas_replies),
+    llamadasReuniones: num(row.llamadas_reuniones),
     createdAt: new Date(row.created_at as string).toISOString(),
   };
 }
@@ -471,4 +497,124 @@ export async function createTask(input: {
     ]
   );
   return mapTask(res.rows[0]);
+}
+
+// --- Tracker Outreach ---
+
+export async function listOutreachWeeks(): Promise<OutreachWeek[]> {
+  const pool = getPool();
+  const res = await pool.query(
+    `select * from outreach_weeks order by week_start asc`
+  );
+  return res.rows.map(mapOutreachWeek);
+}
+
+export async function createOutreachWeek(input: {
+  weekStart: string;
+  emailEnviados?: number;
+  emailOpenRate?: number;
+  emailReplies?: number;
+  emailReuniones?: number;
+  linkedinEnviados?: number;
+  linkedinReplies?: number;
+  linkedinReuniones?: number;
+  whatsappEnviados?: number;
+  whatsappReplies?: number;
+  whatsappReuniones?: number;
+  llamadasEnviados?: number;
+  llamadasReplies?: number;
+  llamadasReuniones?: number;
+}): Promise<OutreachWeek> {
+  const pool = getPool();
+  const id = newId("ow");
+  const res = await pool.query(
+    `insert into outreach_weeks
+       (id, week_start, email_enviados, email_open_rate, email_replies, email_reuniones,
+        linkedin_enviados, linkedin_replies, linkedin_reuniones,
+        whatsapp_enviados, whatsapp_replies, whatsapp_reuniones,
+        llamadas_enviados, llamadas_replies, llamadas_reuniones)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+     returning *`,
+    [
+      id,
+      input.weekStart,
+      input.emailEnviados ?? null,
+      input.emailOpenRate ?? null,
+      input.emailReplies ?? null,
+      input.emailReuniones ?? null,
+      input.linkedinEnviados ?? null,
+      input.linkedinReplies ?? null,
+      input.linkedinReuniones ?? null,
+      input.whatsappEnviados ?? null,
+      input.whatsappReplies ?? null,
+      input.whatsappReuniones ?? null,
+      input.llamadasEnviados ?? null,
+      input.llamadasReplies ?? null,
+      input.llamadasReuniones ?? null,
+    ]
+  );
+  return mapOutreachWeek(res.rows[0]);
+}
+
+export async function updateOutreachWeek(
+  id: string,
+  fields: Partial<{
+    weekStart: string;
+    emailEnviados: number;
+    emailOpenRate: number;
+    emailReplies: number;
+    emailReuniones: number;
+    linkedinEnviados: number;
+    linkedinReplies: number;
+    linkedinReuniones: number;
+    whatsappEnviados: number;
+    whatsappReplies: number;
+    whatsappReuniones: number;
+    llamadasEnviados: number;
+    llamadasReplies: number;
+    llamadasReuniones: number;
+  }>
+): Promise<OutreachWeek | null> {
+  const pool = getPool();
+  const columnByField: Record<string, string> = {
+    weekStart: "week_start",
+    emailEnviados: "email_enviados",
+    emailOpenRate: "email_open_rate",
+    emailReplies: "email_replies",
+    emailReuniones: "email_reuniones",
+    linkedinEnviados: "linkedin_enviados",
+    linkedinReplies: "linkedin_replies",
+    linkedinReuniones: "linkedin_reuniones",
+    whatsappEnviados: "whatsapp_enviados",
+    whatsappReplies: "whatsapp_replies",
+    whatsappReuniones: "whatsapp_reuniones",
+    llamadasEnviados: "llamadas_enviados",
+    llamadasReplies: "llamadas_replies",
+    llamadasReuniones: "llamadas_reuniones",
+  };
+
+  const sets: string[] = [];
+  const values: unknown[] = [];
+  let i = 1;
+  for (const [key, column] of Object.entries(columnByField)) {
+    if (key in fields) {
+      sets.push(`${column} = $${i}`);
+      values.push((fields as Record<string, unknown>)[key] ?? null);
+      i += 1;
+    }
+  }
+  if (sets.length === 0) {
+    const res = await pool.query(
+      "select * from outreach_weeks where id = $1",
+      [id]
+    );
+    return res.rows[0] ? mapOutreachWeek(res.rows[0]) : null;
+  }
+
+  values.push(id);
+  const res = await pool.query(
+    `update outreach_weeks set ${sets.join(", ")} where id = $${i} returning *`,
+    values
+  );
+  return res.rows[0] ? mapOutreachWeek(res.rows[0]) : null;
 }

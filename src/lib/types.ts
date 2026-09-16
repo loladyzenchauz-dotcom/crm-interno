@@ -182,6 +182,27 @@ export const NACHO_REVIEW_COLORS: Record<NachoReviewStatus, string> = {
   No: "#71717a",
 };
 
+// --- Tracker Outreach (evolución semanal de outreach por canal, igual al Excel) ---
+
+export interface OutreachWeek {
+  id: string;
+  weekStart: string; // ISO date del primer día de la semana (como en el Excel)
+  emailEnviados?: number;
+  emailOpenRate?: number; // fracción 0-1
+  emailReplies?: number;
+  emailReuniones?: number;
+  linkedinEnviados?: number;
+  linkedinReplies?: number;
+  linkedinReuniones?: number;
+  whatsappEnviados?: number;
+  whatsappReplies?: number;
+  whatsappReuniones?: number;
+  llamadasEnviados?: number; // "Realizadas" en el Excel
+  llamadasReplies?: number;
+  llamadasReuniones?: number;
+  createdAt: string;
+}
+
 export interface Meeting {
   id: string;
   forMonth?: string; // "Para que mes va el SQC"

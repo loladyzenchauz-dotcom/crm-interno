@@ -64,8 +64,28 @@ create table if not exists meetings (
   created_at timestamptz not null default now()
 );
 
+create table if not exists outreach_weeks (
+  id text primary key,
+  week_start date not null unique,
+  email_enviados numeric,
+  email_open_rate numeric,
+  email_replies numeric,
+  email_reuniones numeric,
+  linkedin_enviados numeric,
+  linkedin_replies numeric,
+  linkedin_reuniones numeric,
+  whatsapp_enviados numeric,
+  whatsapp_replies numeric,
+  whatsapp_reuniones numeric,
+  llamadas_enviados numeric,
+  llamadas_replies numeric,
+  llamadas_reuniones numeric,
+  created_at timestamptz not null default now()
+);
+
 create index if not exists idx_contacts_account on contacts(account_id);
 create index if not exists idx_touchpoints_account on touchpoints(account_id);
 create index if not exists idx_touchpoints_contact on touchpoints(contact_id);
 create index if not exists idx_tasks_account on tasks(account_id);
 create index if not exists idx_meetings_date on meetings(meeting_date);
+create index if not exists idx_outreach_weeks_start on outreach_weeks(week_start);
