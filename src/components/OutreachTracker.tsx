@@ -140,6 +140,50 @@ function sumField(weeks: OutreachWeek[], field: keyof OutreachWeek): number {
   return sum(...weeks.map((w) => w[field] as number | undefined));
 }
 
+const CHANNEL_DEFS = [
+  { key: "email", label: "Email" },
+  { key: "linkedin", label: "LinkedIn" },
+  { key: "whatsapp", label: "WhatsApp" },
+  { key: "llamadas", label: "Llamadas" },
+] as const;
+
+// Ponderado = sobre el total acumulado de todas las semanas/meses, no el promedio
+// simple de los % semanales (que pesaría igual una semana de 5 envíos que una de 200).
+function computeOverallStats(weeks: OutreachWeek[]) {
+  const perChannel = CHANNEL_DEFS.map(({ key, label }) => {
+    const enviadosField = `${key}Enviados` as keyof OutreachWeek;
+    const repliesField = `${key}Replies` as keyof OutreachWeek;
+    const reunionesField = `${key}Reuniones` as keyof OutreachWeek;
+    const enviados = sumField(weeks, enviadosField);
+    const replies = sumField(weeks, repliesField);
+    const reuniones = sumField(weeks, reunionesField);
+    return { key, label, enviados, replies, reuniones };
+  });
+
+  const totalEnviados = sum(...perChannel.map((c) => c.enviados));
+  const totalReplies = sum(...perChannel.map((c) => c.replies));
+  const totalReuniones = sum(...perChannel.map((c) => c.reuniones));
+
+  const weeksWithData = weeks.filter(
+    (w) => sum(w.emailEnviados, w.linkedinEnviados, w.whatsappEnviados, w.llamadasEnviados) > 0
+  ).length;
+
+  const openRates = weeks
+    .map((w) => w.emailOpenRate)
+    .filter((v): v is number => v !== undefined && v !== null);
+  const avgOpenRate =
+    openRates.length > 0 ? openRates.reduce((a, b) => a + b, 0) / openRates.length : undefined;
+
+  return {
+    perChannel,
+    totalEnviados,
+    totalReplies,
+    totalReuniones,
+    weeksWithData,
+    avgOpenRate,
+  };
+}
+
 export default function OutreachTracker({ initial }: { initial: OutreachWeek[] }) {
   const [weeks, setWeeks] = useState<OutreachWeek[]>(initial);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -155,6 +199,9 @@ export default function OutreachTracker({ initial }: { initial: OutreachWeek[] }
     [weeks]
   );
   const columns = useMemo(() => buildColumns(sorted), [sorted]);
+  // Ponderado de todas las semanas cargadas, sin importar los filtros de la tabla
+  // de abajo — es la foto general, se recalcula sola apenas cargás/editás una semana.
+  const overallStats = useMemo(() => computeOverallStats(sorted), [sorted]);
 
   // Opciones de los selects de filtro. El de semana solo muestra las semanas
   // del mes elegido (o todas, si no hay mes seleccionado).
@@ -347,6 +394,81 @@ export default function OutreachTracker({ initial }: { initial: OutreachWeek[] }
 
   return (
     <div className="flex flex-col gap-4 p-6">
+      <div className="rounded-xl border border-black/10 bg-[var(--emi-navy)] p-4 dark:border-white/10">
+        <p className="mb-3 text-xs font-bold uppercase tracking-wide text-white/60">
+          Ponderado — todos los meses cargados
+        </p>
+        <div className="flex flex-wrap gap-6">
+          <div>
+            <p className="text-2xl font-semibold text-[var(--emi-blue)]">{overallStats.totalEnviados}</p>
+            <p className="text-xs text-white/60">Total enviados</p>
+          </div>
+          <div>
+            <p className="text-2xl font-semibold text-[var(--emi-orange)]">{overallStats.totalReplies}</p>
+            <p className="text-xs text-white/60">Total replies</p>
+          </div>
+          <div>
+            <p className="text-2xl font-semibold text-[var(--emi-purple)]">
+              {pct(overallStats.totalReplies, overallStats.totalEnviados)}
+            </p>
+            <p className="text-xs text-white/60">Reply % ponderado</p>
+          </div>
+          <div>
+            <p className="text-2xl font-semibold text-emerald-400">{overallStats.totalReuniones}</p>
+            <p className="text-xs text-white/60">Total reuniones / SQCs</p>
+          </div>
+          <div>
+            <p className="text-2xl font-semibold text-white">
+              {overallStats.weeksWithData > 0
+                ? Math.round(overallStats.totalEnviados / overallStats.weeksWithData)
+                : "—"}
+            </p>
+            <p className="text-xs text-white/60">Promedio enviados / semana</p>
+          </div>
+          <div>
+            <p className="text-2xl font-semibold text-white">
+              {overallStats.weeksWithData > 0
+                ? (overallStats.totalReuniones / overallStats.weeksWithData).toFixed(1)
+                : "—"}
+            </p>
+            <p className="text-xs text-white/60">Promedio reuniones / semana</p>
+          </div>
+          <div>
+            <p className="text-2xl font-semibold text-white">
+              {overallStats.avgOpenRate === undefined
+                ? "—"
+                : `${Math.round(overallStats.avgOpenRate * 100)}%`}
+            </p>
+            <p className="text-xs text-white/60">Open rate promedio (email)</p>
+          </div>
+        </div>
+
+        <div className="mt-4 overflow-x-auto">
+          <table className="min-w-full text-left text-xs text-white/80">
+            <thead>
+              <tr className="border-b border-white/10 text-white/50">
+                <th className="py-1 pr-4 font-medium">Canal</th>
+                <th className="py-1 pr-4 font-medium">Enviados</th>
+                <th className="py-1 pr-4 font-medium">Replies</th>
+                <th className="py-1 pr-4 font-medium">Reply % ponderado</th>
+                <th className="py-1 pr-4 font-medium">Reuniones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {overallStats.perChannel.map((c) => (
+                <tr key={c.key} className="border-b border-white/5 last:border-0">
+                  <td className="py-1 pr-4">{c.label}</td>
+                  <td className="py-1 pr-4">{c.enviados}</td>
+                  <td className="py-1 pr-4">{c.replies}</td>
+                  <td className="py-1 pr-4">{pct(c.replies, c.enviados)}</td>
+                  <td className="py-1 pr-4">{c.reuniones}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <div className="rounded-xl border border-[var(--emi-blue)]/20 bg-[var(--emi-blue-soft)] p-4 text-sm text-zinc-700 dark:text-zinc-300">
         Misma estructura que tu Excel: semanas como columnas, agrupadas por canal, con el total del
         mes al final de cada grupo. Enviados, Open Rate, Replies y Reuniones se cargan a mano — el
