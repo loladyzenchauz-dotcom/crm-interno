@@ -9,7 +9,6 @@ export default async function TrackerOutreachPage() {
   return (
     <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-black">
       <AppHeader
-        current="/tracker-outreach"
         title="Tracker Outreach"
         subtitle="Evolución semana a semana de tu outreach por canal"
       />

@@ -6,6 +6,7 @@ import {
   Task,
   Stage,
   Channel,
+  CHANNELS,
   AccountWithRelations,
   ACTIVE_PROSPECTING_STAGES,
   MeetingScheduledThisWeek,
@@ -14,6 +15,9 @@ import {
   MeetingType,
   MeetingStatus,
   OutreachWeek,
+  MultithreadingAccount,
+  WorkingFloorStatus,
+  TouchpointSuggestion,
 } from "./types";
 
 function toDateStr(d: unknown): string {
@@ -78,6 +82,7 @@ function mapMeeting(row: Record<string, unknown>): Meeting {
     forMonth: (row.for_month as string) ?? undefined,
     meetingDate: row.meeting_date ? toDateStr(row.meeting_date) : undefined,
     company: row.company as string,
+    accountId: (row.account_id as string) ?? undefined,
     contactName: (row.contact_name as string) ?? undefined,
     contactRole: (row.contact_role as string) ?? undefined,
     linkedinUrl: (row.linkedin_url as string) ?? undefined,
@@ -385,18 +390,32 @@ export async function createMeeting(input: {
 }): Promise<Meeting> {
   const pool = getPool();
   const id = newId("mtg");
+
+  // Auto-vincular a la cuenta del CRM matcheando por nombre (normalizado,
+  // sin acentos/símbolos) — igual criterio que usamos para conciliar el TAL.
+  // Si no matchea ninguna, queda sin vincular (se puede resolver más adelante).
+  const accountMatch = await pool.query(
+    `select id from accounts
+     where lower(regexp_replace(name, '[^a-zA-Z0-9]', '', 'g'))
+         = lower(regexp_replace($1, '[^a-zA-Z0-9]', '', 'g'))
+     limit 1`,
+    [input.company]
+  );
+  const accountId = accountMatch.rows[0]?.id ?? null;
+
   const res = await pool.query(
     `insert into meetings
-       (id, for_month, meeting_date, company, contact_name, contact_role,
+       (id, for_month, meeting_date, company, account_id, contact_name, contact_role,
         linkedin_url, type, channel, status, ae, sqc_value, note,
         qualified, qualified_by_nacho)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
      returning *`,
     [
       id,
       input.forMonth || null,
       input.meetingDate || null,
       input.company,
+      accountId,
       input.contactName || null,
       input.contactRole || null,
       input.linkedinUrl || null,
@@ -617,4 +636,160 @@ export async function updateOutreachWeek(
     values
   );
   return res.rows[0] ? mapOutreachWeek(res.rows[0]) : null;
+}
+
+// --- Panel principal ---
+
+// Reuniones de la semana calendario actual (lunes a domingo), para el
+// resumen semanal: con qué cuenta y qué día.
+export async function getWeekMeetings(): Promise<Meeting[]> {
+  const pool = getPool();
+  const res = await pool.query(
+    `select * from meetings
+     where meeting_date >= date_trunc('week', current_date)::date
+       and meeting_date < (date_trunc('week', current_date) + interval '7 days')::date
+     order by meeting_date asc`
+  );
+  return res.rows.map(mapMeeting);
+}
+
+// Cuentas en "Reunión agendada" que todavía tienen una sola reunión
+// registrada — falta multithreadear antes (o en paralelo a) esa reunión.
+export async function getMultithreadingAccounts(): Promise<
+  MultithreadingAccount[]
+> {
+  const pool = getPool();
+  const res = await pool.query(
+    `select a.id as account_id, a.name as account_name,
+            m.meeting_date, m.contact_name
+     from accounts a
+     join meetings m on m.account_id = a.id
+     where a.stage = 'meeting_scheduled'
+       and (select count(*) from meetings m2 where m2.account_id = a.id) = 1
+     order by m.meeting_date asc nulls last`
+  );
+  return res.rows.map((row) => ({
+    accountId: row.account_id as string,
+    accountName: row.account_name as string,
+    meetingDate: row.meeting_date ? toDateStr(row.meeting_date) : undefined,
+    contactName: (row.contact_name as string) ?? undefined,
+  }));
+}
+
+// Piso de 10 cuentas en Working: si hay menos, trae candidatas de
+// "To contact" (las más antiguas primero) para promover hoy.
+export async function getWorkingFloorStatus(
+  floor = 10
+): Promise<WorkingFloorStatus> {
+  const pool = getPool();
+  const [workingRes, candidatesRes] = await Promise.all([
+    pool.query(
+      `select count(*)::int as count from accounts where stage = 'working'`
+    ),
+    pool.query(
+      `select * from accounts where stage = 'to_contact' order by created_at asc`
+    ),
+  ]);
+  const workingCount = workingRes.rows[0]?.count ?? 0;
+  const needed = Math.max(0, floor - workingCount);
+  const suggestions = candidatesRes.rows.slice(0, needed).map(mapAccount);
+  return { workingCount, floor, needed, suggestions };
+}
+
+// A quién tocarle hoy dentro de las cuentas en Working: cadencia de 7-8
+// touchpoints totales por contacto, mínimo 2 días entre touchpoints del
+// mismo canal, y sin email los lunes/viernes (ahí solo LinkedIn/WhatsApp/llamada).
+export async function getTodayTouchpointPlan(): Promise<
+  TouchpointSuggestion[]
+> {
+  const pool = getPool();
+  const res = await pool.query(
+    `select a.id as account_id, a.name as account_name,
+            c.id as contact_id, c.name as contact_name,
+            t.channel, t.date
+     from accounts a
+     join contacts c on c.account_id = a.id
+     left join touchpoints t on t.contact_id = c.id
+     where a.stage = 'working'
+     order by a.id, c.id, t.date desc`
+  );
+
+  type ContactInfo = {
+    accountId: string;
+    accountName: string;
+    contactName: string;
+    touchpoints: { channel: Channel; date: string }[];
+  };
+  const byContact = new Map<string, ContactInfo>();
+  for (const row of res.rows) {
+    const contactId = row.contact_id as string;
+    if (!byContact.has(contactId)) {
+      byContact.set(contactId, {
+        accountId: row.account_id as string,
+        accountName: row.account_name as string,
+        contactName: row.contact_name as string,
+        touchpoints: [],
+      });
+    }
+    if (row.channel && row.date) {
+      byContact
+        .get(contactId)!
+        .touchpoints.push({ channel: row.channel as Channel, date: toDateStr(row.date) });
+    }
+  }
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const dow = new Date(`${todayStr}T00:00:00Z`).getUTCDay(); // 0=Dom,1=Lun,...5=Vie,6=Sáb
+  const isMonOrFri = dow === 1 || dow === 5;
+
+  const MAX_TOTAL_TOUCHPOINTS = 8;
+  const MIN_GAP_DAYS = 2;
+
+  function daysBetween(a: string, b: string): number {
+    const da = new Date(`${a}T00:00:00Z`).getTime();
+    const db = new Date(`${b}T00:00:00Z`).getTime();
+    return Math.round((db - da) / 86400000);
+  }
+
+  const suggestions: TouchpointSuggestion[] = [];
+  for (const [contactId, info] of byContact.entries()) {
+    const total = info.touchpoints.length;
+    if (total >= MAX_TOTAL_TOUCHPOINTS) continue;
+
+    const lastByChannel = new Map<Channel, string>();
+    for (const tp of info.touchpoints) {
+      const prev = lastByChannel.get(tp.channel);
+      if (!prev || tp.date > prev) lastByChannel.set(tp.channel, tp.date);
+    }
+
+    const eligible = CHANNELS.map((c) => c.id).filter((channel) => {
+      if (isMonOrFri && channel === "email") return false;
+      const last = lastByChannel.get(channel);
+      if (!last) return true;
+      return daysBetween(last, todayStr) >= MIN_GAP_DAYS;
+    });
+    if (eligible.length === 0) continue;
+
+    // Preferir el canal nunca usado con este contacto; si no hay, el que
+    // hace más tiempo no se usa (para rotar canales en vez de repetir).
+    eligible.sort((a, b) => {
+      const la = lastByChannel.get(a);
+      const lb = lastByChannel.get(b);
+      if (!la && !lb) return 0;
+      if (!la) return -1;
+      if (!lb) return 1;
+      return la < lb ? -1 : la > lb ? 1 : 0;
+    });
+
+    suggestions.push({
+      accountId: info.accountId,
+      accountName: info.accountName,
+      contactId,
+      contactName: info.contactName,
+      channel: eligible[0],
+      touchpointsSoFar: total,
+    });
+  }
+
+  return suggestions;
 }

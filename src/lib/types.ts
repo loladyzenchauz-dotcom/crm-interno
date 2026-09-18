@@ -128,6 +128,39 @@ export interface Summary {
   meetingsThisWeek: MeetingScheduledThisWeek[];
 }
 
+// --- Panel principal: multithreading, piso de Working, plan del día ---
+
+// Cuenta con reunión agendada pero todavía una sola reunión registrada —
+// falta multithreadear (sumar más gente de la cuenta antes de la primera
+// reunión, e idealmente conseguir una segunda reunión previo a esa primera).
+export interface MultithreadingAccount {
+  accountId: string;
+  accountName: string;
+  meetingDate?: string;
+  contactName?: string;
+}
+
+// Estado del piso de 10 cuentas en Working: si faltan, trae candidatas de
+// "To contact" (las más antiguas primero) para promover hoy.
+export interface WorkingFloorStatus {
+  workingCount: number;
+  floor: number;
+  needed: number;
+  suggestions: Account[];
+}
+
+// Sugerencia de a quién tocarle hoy dentro de las cuentas en Working, según
+// la cadencia de 7-8 touchpoints totales, mínimo 2 días entre touchpoints
+// del mismo canal, y sin email lunes/viernes.
+export interface TouchpointSuggestion {
+  accountId: string;
+  accountName: string;
+  contactId: string;
+  contactName: string;
+  channel: Channel;
+  touchpointsSoFar: number;
+}
+
 // --- Reuniones (tracker de "Reuniones Agendadas" del Excel) ---
 
 export type MeetingType = "Inbound" | "Outbound";
@@ -208,6 +241,9 @@ export interface Meeting {
   forMonth?: string; // "Para que mes va el SQC"
   meetingDate?: string; // ISO date
   company: string;
+  // Link a la cuenta del CRM (autocompletado por nombre al crear la reunión).
+  // Puede quedar sin resolver si el nombre de "company" no matchea ninguna cuenta.
+  accountId?: string;
   contactName?: string;
   contactRole?: string;
   linkedinUrl?: string;

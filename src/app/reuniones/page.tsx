@@ -9,7 +9,6 @@ export default async function ReunionesPage() {
   return (
     <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-black">
       <AppHeader
-        current="/reuniones"
         title="Reuniones"
         subtitle="Tracker de reuniones agendadas — estado, AE y calificación"
       />

@@ -1,11 +1,7 @@
-import AppNav from "./AppNav";
-
 export default function AppHeader({
-  current,
   title,
   subtitle,
 }: {
-  current: string;
   title: string;
   subtitle: string;
 }) {
@@ -15,7 +11,6 @@ export default function AppHeader({
         <h1 className="text-lg font-semibold text-white">{title}</h1>
         <p className="text-sm text-white/60">{subtitle}</p>
       </div>
-      <AppNav current={current} />
     </header>
   );
 }

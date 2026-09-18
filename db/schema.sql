@@ -50,6 +50,9 @@ create table if not exists meetings (
   for_month text,
   meeting_date date,
   company text not null,
+  -- Link a accounts.id (autocompletado por nombre al crear la reunión).
+  -- Puede quedar null si "company" no matchea ninguna cuenta del CRM.
+  account_id text references accounts(id),
   contact_name text,
   contact_role text,
   linkedin_url text,
